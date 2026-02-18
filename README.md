@@ -1,21 +1,195 @@
-```txt
-npm install
-npm run dev
+# 심리검사 시스템 🧠
+
+완전한 기능을 갖춘 웹 기반 심리검사 플랫폼으로, 상담사와 내담자 간의 원격 심리 평가를 지원합니다.
+
+## 🌐 배포된 URL
+
+**개발 환경:** https://3000-in4fm39zbf1k3ggufr0fp-a402f90a.sandbox.novita.ai
+
+## ✨ 주요 기능
+
+### 1️⃣ 검사 유형
+- **📝 SCT (문장완성검사)**: 50개 문항으로 구성된 심리 평가
+  - 14개 카테고리별 분석 (어머니/아버지 태도, 가족, 이성, 친구, 권위자, 두려움, 죄책감, 능력, 과거/미래, 목표)
+- **🔍 DSI (자아분화검사)**: 36개 문항의 5점 척도 검사
+  - 5개 영역 분석 (인지적 기능, 자아통합, 가족투사, 정서적 단절, 가족퇴행)
+  - 총점 기반 수준 평가 (180점 만점)
+
+### 2️⃣ 사용자 역할
+
+#### 👨‍⚕️ 상담사 기능
+- 검사 링크 생성 및 관리
+- 내담자별 링크 ID 발급
+- 제출된 검사 결과 조회
+- 실시간 검사 완료 상태 추적
+
+#### 🧑 내담자 기능
+- 링크 ID로 간편 접근
+- 전화번호 인증
+- 검사 진행 및 제출
+- 진행률 실시간 표시
+
+#### 🔐 관리자 기능
+- 상담사 가입 승인/거부
+- 학력 자동 검증 (40+ 상담 관련 키워드)
+- 전체 시스템 통계 조회
+- 승인된 상담사 관리
+
+### 3️⃣ 기술 스택
+- **프론트엔드**: React 18 + TailwindCSS (CDN)
+- **백엔드**: Hono Framework (Edge Runtime)
+- **배포**: Cloudflare Pages
+- **데이터**: 메모리 기반 저장소 (세션 관리)
+
+## 📋 기능 목록
+
+### 완료된 기능 ✅
+- [x] 링크 기반 검사 초대 시스템
+- [x] 전화번호 인증 및 보안
+- [x] SCT 50문항 검사 (카테고리별 분류)
+- [x] DSI 36문항 검사 (5개 영역 분석)
+- [x] 실시간 진행률 표시
+- [x] 검사 결과 상세 조회
+- [x] 상담사 승인 워크플로우
+- [x] 학력 자동 검증 시스템
+- [x] 반응형 UI (모바일 최적화)
+- [x] 링크 ID 복사 기능
+- [x] 상태별 링크 관리 (대기중/완료)
+- [x] 검사 결과 필터링 (상담사별)
+
+### 향후 개선 사항 🔧
+- [ ] AI 기반 SCT 카테고리 요약 (API 키 설정 필요)
+- [ ] AI 기반 DSI 상담 권장사항 (API 키 설정 필요)
+- [ ] Cloudflare D1 데이터베이스 영구 저장
+- [ ] PDF 결과 리포트 다운로드
+- [ ] 이메일 알림 시스템
+- [ ] 검사 이력 통계 대시보드
+- [ ] 다중 검사 배치 처리
+
+## 🔑 기본 계정
+
+### 관리자 계정
+```
+아이디: limyj007
+비밀번호: SKplimyj007
 ```
 
-```txt
-npm run deploy
+### 테스트 플로우
+1. **상담사 가입**
+   - "👨‍⚕️ 상담사" → "상담사 가입 신청"
+   - 학력에 "상담심리학과" 포함 시 자동 승인 권장 표시
+
+2. **관리자 승인**
+   - "🔐 관리자" 로그인
+   - 대기 중인 상담사 승인
+
+3. **링크 생성**
+   - 상담사 로그인 → "검사 링크 생성"
+   - 내담자 정보 입력 → 링크 ID 복사
+
+4. **검사 진행**
+   - 메인 화면에서 링크 ID 입력
+   - 전화번호 인증 → 검사 시작
+   - 검사 완료 후 자동 제출
+
+5. **결과 조회**
+   - 상담사: "📊 제출된 검사" → "결과 보기"
+   - 카테고리별/영역별 상세 분석
+
+## 📊 데이터 구조
+
+### 링크 데이터
+```javascript
+{
+  linkId: "link_1234567890_abc123",
+  counselorPhone: "010-1234-5678",
+  clientName: "홍길동",
+  clientPhone: "010-9876-5432",
+  testType: "SCT" | "DSI",
+  status: "pending" | "completed",
+  createdAt: "2024-01-15T10:30:00Z"
+}
 ```
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
-
-```txt
-npm run cf-typegen
+### 세션 데이터
+```javascript
+{
+  sessionId: "session_1234567890_xyz789",
+  testType: "SCT" | "DSI",
+  responses: { 1: "...", 2: "...", ... },
+  userPhone: "010-9876-5432",
+  linkId: "link_1234567890_abc123",
+  createdAt: "2024-01-15T11:00:00Z"
+}
 ```
 
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
+## 🚀 로컬 개발
 
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
+```bash
+# 빌드
+npm run build
+
+# 개발 서버 시작 (PM2)
+pm2 start ecosystem.config.cjs
+
+# 로그 확인
+pm2 logs webapp --nostream
+
+# 서비스 재시작
+fuser -k 3000/tcp 2>/dev/null || true
+pm2 restart webapp
+
+# 테스트
+curl http://localhost:3000
 ```
+
+## 📝 API 엔드포인트
+
+현재 정적 페이지 기반으로 작동하며, 향후 다음 API를 추가할 예정:
+
+- `POST /api/sessions` - 검사 결과 저장
+- `GET /api/sessions/:id` - 검사 결과 조회
+- `POST /api/links` - 링크 생성
+- `GET /api/links/:id` - 링크 정보 조회
+- `POST /api/counselors` - 상담사 신청
+- `PUT /api/counselors/:id/approve` - 상담사 승인
+
+## 🔒 보안 기능
+
+- 전화번호 기반 인증
+- 링크 ID 기반 접근 제어
+- 상담사-내담자 매칭 검증
+- 관리자 전용 기능 분리
+- 세션 기반 데이터 격리
+
+## 📱 반응형 지원
+
+- 모바일 최적화 (360px+)
+- 태블릿 지원 (768px+)
+- 데스크톱 레이아웃 (1024px+)
+
+## 🎨 디자인 특징
+
+- TailwindCSS 기반 모던 UI
+- 그라데이션 배경 (역할별 색상)
+- 직관적인 아이콘 사용
+- 실시간 피드백 애니메이션
+- 접근성 고려 (ARIA 지원)
+
+## 📄 라이선스
+
+이 프로젝트는 상담 및 심리 평가 목적으로 개발되었습니다.
+
+## 👥 사용 사례
+
+- 원격 심리 상담 사전 평가
+- 대학 상담센터 온라인 검사
+- 기업 EAP 프로그램 선별 도구
+- 청소년 상담 기관 초기 평가
+- 연구 목적 심리 데이터 수집
+
+---
+
+**Last Updated**: 2024-01-15  
+**Version**: 1.0.0  
+**Status**: ✅ Active (Production Ready)
