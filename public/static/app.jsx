@@ -61,6 +61,55 @@ function PsychologicalTestSystem() {
   const [formMsg, setFormMsg] = useState({ type: "", text: "" });
   const [linkInput, setLinkInput] = useState("");
 
+  // ✅ 로그인 상태 저장
+  function saveLoginState(loginData) {
+    storage.set("current_login", JSON.stringify(loginData));
+    console.log('💾 로그인 상태 저장:', loginData.type);
+  }
+
+  // ✅ 로그인 상태 복원
+  function restoreLoginState() {
+    const loginData = storage.get("current_login");
+    if (!loginData) return false;
+    
+    try {
+      const data = JSON.parse(loginData.value);
+      console.log('🔄 로그인 상태 복원:', data.type);
+      
+      if (data.type === "admin") {
+        setIsAdmin(true);
+        setView("admin");
+        loadAllSubmitted();
+        const r = storage.get("counselor_requests");
+        const pendingList = r ? JSON.parse(r.value).filter(c => c.status === "pending") : [];
+        setPendingCounselors(pendingList);
+        const a = storage.get("approved_counselors");
+        const approvedList = a ? JSON.parse(a.value) : [];
+        setApprovedCounselors(approvedList);
+        return true;
+      } else if (data.type === "counselor") {
+        setIsCounselor(true);
+        setCounselorPhone(data.phone);
+        const lr = storage.get("counselor_links_" + data.phone);
+        const links = lr ? JSON.parse(lr.value) : [];
+        setGeneratedLinks(links);
+        loadAllSubmitted();
+        setView("counselorDashboard");
+        return true;
+      }
+    } catch (error) {
+      console.error('❌ 로그인 복원 실패:', error);
+      storage.remove("current_login");
+    }
+    return false;
+  }
+
+  // ✅ 로그아웃 시 상태 제거
+  function clearLoginState() {
+    storage.remove("current_login");
+    console.log('🚪 로그인 상태 제거');
+  }
+
   function genId(prefix) {
     return prefix + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
   }
@@ -292,6 +341,9 @@ function PsychologicalTestSystem() {
       setIsAdmin(true);
       setView("admin");
       
+      // ✅ 로그인 상태 저장
+      saveLoginState({ type: "admin" });
+      
       // 데이터 로드
       loadAllSubmitted();
       const r = storage.get("counselor_requests");
@@ -325,6 +377,9 @@ function PsychologicalTestSystem() {
       setIsCounselor(true);
       setCounselorPhone(found.phone);
       
+      // ✅ 로그인 상태 저장
+      saveLoginState({ type: "counselor", phone: found.phone });
+      
       // 상담사의 링크 목록 로드
       const lr = storage.get("counselor_links_" + found.phone);
       const links = lr ? JSON.parse(lr.value) : [];
@@ -334,19 +389,28 @@ function PsychologicalTestSystem() {
       loadAllSubmitted();
       setView("counselorDashboard");
       setLoginMsg({ type: "", text: "" });
+      setLoginMsg({ type: "", text: "" });
     } else {
       setLoginMsg({ type: "error", text: "승인된 상담사가 아니거나 정보가 올바르지 않습니다." });
     }
   }
 
-  // ✅ 컴포넌트 마운트 시 데이터 로드
+  // ✅ 컴포넌트 마운트 시 데이터 로드 및 로그인 상태 복원
   useEffect(() => {
     console.log('🔄 앱 초기화 - LocalStorage 데이터 로드 시작');
+    
+    // ✅ 로그인 상태 복원 (최우선)
+    const restored = restoreLoginState();
+    if (restored) {
+      console.log('✅ 로그인 상태 자동 복원 완료');
+    } else {
+      console.log('ℹ️ 복원할 로그인 정보 없음 - 로그인 화면 표시');
+    }
     
     // 디버깅: LocalStorage 키 확인
     const keys = Object.keys(localStorage);
     console.log('📦 저장된 키 목록:', keys.filter(k => 
-      k.includes('counselor') || k.includes('submitted') || k.includes('link_') || k.includes('session_')
+      k.includes('counselor') || k.includes('submitted') || k.includes('link_') || k.includes('session_') || k.includes('login')
     ));
     
     // 승인된 상담사 수 확인
@@ -533,6 +597,9 @@ function PsychologicalTestSystem() {
   }
 
   function logout() {
+    // ✅ 로그인 상태 제거
+    clearLoginState();
+    
     setIsAdmin(false);
     setIsCounselor(false);
     setCounselorPhone("");
@@ -548,6 +615,8 @@ function PsychologicalTestSystem() {
     setSubmitted([]);
     setLinkInput("");
     setView("login");
+    
+    console.log('👋 로그아웃 완료');
   }
 
   const Msg = ({ msg }) => !msg.text ? null : (
