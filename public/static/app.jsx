@@ -1,10 +1,34 @@
 const { useState, useEffect } = React;
 
-// 전역 저장소
-const memStore = {};
+// ✅ LocalStorage 기반 영구 저장소
 const storage = {
-  get: (key) => memStore[key] ? { value: memStore[key] } : null,
-  set: (key, value) => { memStore[key] = value; return true; },
+  get: (key) => {
+    try {
+      const value = localStorage.getItem(key);
+      return value ? { value } : null;
+    } catch (error) {
+      console.error('Storage get error:', error);
+      return null;
+    }
+  },
+  set: (key, value) => {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      console.error('Storage set error:', error);
+      return false;
+    }
+  },
+  remove: (key) => {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      console.error('Storage remove error:', error);
+      return false;
+    }
+  }
 };
 
 function PsychologicalTestSystem() {
@@ -149,16 +173,21 @@ function PsychologicalTestSystem() {
   
   function storeSession(data) {
     storage.set("session_" + data.sessionId, JSON.stringify(data));
+    console.log('💾 세션 저장:', data.sessionId, '| 검사:', data.testType);
+    
     const listRaw = storage.get("submitted_list");
     const list = listRaw ? JSON.parse(listRaw.value) : [];
-    list.unshift({
+    const sessionInfo = {
       sessionId: data.sessionId,
       testType: data.testType,
       userPhone: data.userPhone,
       createdAt: data.createdAt,
       linkId: data.linkId
-    });
+    };
+    list.unshift(sessionInfo);
     storage.set("submitted_list", JSON.stringify(list));
+    console.log('📊 제출 목록 업데이트:', list.length + '건');
+    
     setSubmitted(list);
   }
   
@@ -166,6 +195,7 @@ function PsychologicalTestSystem() {
     const r = storage.get("submitted_list");
     const list = r ? JSON.parse(r.value) : [];
     setSubmitted(list);
+    console.log('📊 제출 목록 로드:', list.length + '건');
   }
 
   function copyLink(linkId) {
@@ -208,6 +238,8 @@ function PsychologicalTestSystem() {
       status: "pending"
     };
     storeLink(data);
+    console.log('🔗 링크 생성:', linkId, '| 내담자:', data.clientName, '| 검사:', data.testType);
+    
     setGeneratedLinks(prev => [data, ...prev]);
     setLinkForm({ clientName: "", clientPhone: "", testType: "SCT" });
     setFormMsg({ type: "success", text: "링크가 생성되었습니다! 📋 링크 ID 복사 버튼으로 내담자에게 전달하세요." });
@@ -256,13 +288,23 @@ function PsychologicalTestSystem() {
 
   function adminLogin() {
     if (userInfo.phone === "limyj007" && userInfo.password === "SKplimyj007") {
+      console.log('🔐 관리자 로그인 성공');
       setIsAdmin(true);
       setView("admin");
+      
+      // 데이터 로드
       loadAllSubmitted();
       const r = storage.get("counselor_requests");
-      setPendingCounselors(r ? JSON.parse(r.value).filter(c => c.status === "pending") : []);
+      const pendingList = r ? JSON.parse(r.value).filter(c => c.status === "pending") : [];
+      setPendingCounselors(pendingList);
+      console.log('⏳ 대기 중인 상담사:', pendingList.length + '명');
+      
       const a = storage.get("approved_counselors");
-      setApprovedCounselors(a ? JSON.parse(a.value) : []);
+      const approvedList = a ? JSON.parse(a.value) : [];
+      setApprovedCounselors(approvedList);
+      console.log('✅ 승인된 상담사:', approvedList.length + '명');
+      
+      setLoginMsg({ type: "", text: "" });
     } else {
       setLoginMsg({ type: "error", text: "관리자 계정 정보가 올바르지 않습니다." });
     }
@@ -275,22 +317,66 @@ function PsychologicalTestSystem() {
     }
     const r = storage.get("approved_counselors");
     const list = r ? JSON.parse(r.value) : [];
+    console.log('🔍 로그인 시도:', userInfo.phone, '| 승인된 상담사:', list.length + '명');
+    
     const found = list.find(c => c.phone === userInfo.phone && c.password === userInfo.password);
     if (found) {
+      console.log('✅ 상담사 로그인 성공:', found.phone);
       setIsCounselor(true);
       setCounselorPhone(found.phone);
+      
+      // 상담사의 링크 목록 로드
       const lr = storage.get("counselor_links_" + found.phone);
-      setGeneratedLinks(lr ? JSON.parse(lr.value) : []);
+      const links = lr ? JSON.parse(lr.value) : [];
+      setGeneratedLinks(links);
+      console.log('🔗 생성된 링크:', links.length + '건');
+      
       loadAllSubmitted();
       setView("counselorDashboard");
+      setLoginMsg({ type: "", text: "" });
     } else {
       setLoginMsg({ type: "error", text: "승인된 상담사가 아니거나 정보가 올바르지 않습니다." });
     }
   }
 
+  // ✅ 컴포넌트 마운트 시 데이터 로드
+  useEffect(() => {
+    console.log('🔄 앱 초기화 - LocalStorage 데이터 로드 시작');
+    
+    // 디버깅: LocalStorage 키 확인
+    const keys = Object.keys(localStorage);
+    console.log('📦 저장된 키 목록:', keys.filter(k => 
+      k.includes('counselor') || k.includes('submitted') || k.includes('link_') || k.includes('session_')
+    ));
+    
+    // 승인된 상담사 수 확인
+    const approvedData = storage.get("approved_counselors");
+    if (approvedData) {
+      const approved = JSON.parse(approvedData.value);
+      console.log('✅ 승인된 상담사:', approved.length + '명');
+    }
+    
+    // 대기 중인 상담사 수 확인
+    const pendingData = storage.get("counselor_requests");
+    if (pendingData) {
+      const pending = JSON.parse(pendingData.value).filter(c => c.status === "pending");
+      console.log('⏳ 대기 중인 상담사:', pending.length + '명');
+    }
+    
+    // 제출된 검사 수 확인
+    const submittedData = storage.get("submitted_list");
+    if (submittedData) {
+      const submitted = JSON.parse(submittedData.value);
+      console.log('📊 제출된 검사:', submitted.length + '건');
+    }
+    
+    console.log('✅ 데이터 로드 완료');
+  }, []); // 한 번만 실행
+
   useEffect(() => {
     if (isCounselor && counselorPhone) {
       storage.set("counselor_links_" + counselorPhone, JSON.stringify(generatedLinks));
+      console.log('💾 상담사 링크 저장:', counselorPhone, generatedLinks.length + '건');
     }
   }, [generatedLinks, isCounselor, counselorPhone]);
 
@@ -306,14 +392,16 @@ function PsychologicalTestSystem() {
       return;
     }
     const { ok, kws } = checkEdu(counselorForm.education);
-    list.push({
+    const newCounselor = {
       ...counselorForm,
       eduOk: ok,
       eduKws: kws,
       requestDate: new Date().toISOString(),
       status: "pending"
-    });
+    };
+    list.push(newCounselor);
     storage.set("counselor_requests", JSON.stringify(list));
+    console.log('✅ 상담사 가입 신청:', counselorForm.phone, '| 총', list.length + '건');
     setFormMsg({ type: "success", text: "가입 신청 완료! 관리자 승인 후 로그인 가능합니다." });
     setCounselorForm({ name: "", phone: "", password: "", certification: "", education: "", experience: "" });
     setTimeout(() => {
@@ -323,25 +411,45 @@ function PsychologicalTestSystem() {
   }
 
   function approveCounselor(phone) {
+    console.log('🔄 상담사 승인 시작:', phone);
+    
     const r = storage.get("counselor_requests");
     let list = r ? JSON.parse(r.value) : [];
     const target = list.find(c => c.phone === phone);
-    if (!target) return;
+    
+    if (!target) {
+      console.error('❌ 승인 대상을 찾을 수 없음:', phone);
+      return;
+    }
+    
+    // 대기 목록에서 제거
     list = list.filter(c => c.phone !== phone);
     storage.set("counselor_requests", JSON.stringify(list));
+    console.log('📝 대기 목록 업데이트:', list.length + '건 남음');
+    
+    // 승인 목록에 추가
     const a = storage.get("approved_counselors");
     const approved = a ? JSON.parse(a.value) : [];
-    approved.push({ ...target, status: "approved", approvedDate: new Date().toISOString() });
+    const approvedCounselor = { ...target, status: "approved", approvedDate: new Date().toISOString() };
+    approved.push(approvedCounselor);
     storage.set("approved_counselors", JSON.stringify(approved));
+    console.log('✅ 승인 완료:', phone, '| 총', approved.length + '명');
+    
+    // 화면 업데이트
     setPendingCounselors(list.filter(c => c.status === "pending"));
     setApprovedCounselors(approved);
+    
+    // 확인 메시지
+    alert(`✅ ${target.name || phone} 상담사가 승인되었습니다!`);
   }
   
   function rejectCounselor(phone) {
+    console.log('🔄 상담사 거부:', phone);
     const r = storage.get("counselor_requests");
     let list = r ? JSON.parse(r.value) : [];
     list = list.filter(c => c.phone !== phone);
     storage.set("counselor_requests", JSON.stringify(list));
+    console.log('📝 대기 목록 업데이트:', list.length + '건 남음');
     setPendingCounselors(list.filter(c => c.status === "pending"));
   }
 
@@ -351,6 +459,7 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + missing.length + "개 문항이 비어 있습니다.");
       return;
     }
+    
     const data = {
       sessionId,
       testType: "SCT",
@@ -360,16 +469,21 @@ function PsychologicalTestSystem() {
       userPhone: userInfo.phone || "미확인",
       linkId: activeLinkId || null
     };
+    
+    console.log('📝 SCT 검사 제출:', sessionId, '| 링크:', activeLinkId);
     storeSession(data);
     
+    // 링크 상태 업데이트
     if (activeLinkId) {
       const ld = loadLink(activeLinkId);
       if (ld) {
         ld.status = "completed";
         storeLink(ld);
+        console.log('✅ 링크 상태 업데이트:', activeLinkId, '→ completed');
         setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
       }
     }
+    
     setView("complete");
   }
   
@@ -378,6 +492,7 @@ function PsychologicalTestSystem() {
       setSaveStatus("⚠️ " + (36 - Object.keys(dsiResponses).length) + "개 문항이 남아있습니다.");
       return;
     }
+    
     const data = {
       sessionId,
       testType: "DSI",
@@ -386,13 +501,17 @@ function PsychologicalTestSystem() {
       userPhone: userInfo.phone || "미확인",
       linkId: activeLinkId || null
     };
+    
+    console.log('📝 DSI 검사 제출:', sessionId, '| 링크:', activeLinkId);
     storeSession(data);
     
+    // 링크 상태 업데이트
     if (activeLinkId) {
       const ld = loadLink(activeLinkId);
       if (ld) {
         ld.status = "completed";
         storeLink(ld);
+        console.log('✅ 링크 상태 업데이트:', activeLinkId, '→ completed');
         setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
       }
     }
@@ -982,10 +1101,28 @@ function PsychologicalTestSystem() {
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto space-y-4">
         <div className="bg-white rounded-xl shadow p-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">🔐 관리자 대시보드</h1>
-          <button onClick={logout} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-            로그아웃
-          </button>
+          <div>
+            <h1 className="text-xl font-bold">🔐 관리자 대시보드</h1>
+            <p className="text-xs text-gray-400 mt-1">LocalStorage 영구 저장 활성화</p>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                console.log('=== 🔍 LocalStorage 데이터 확인 ===');
+                console.log('승인된 상담사:', approvedCounselors.length);
+                console.log('대기 중인 상담사:', pendingCounselors.length);
+                console.log('제출된 검사:', submitted.length);
+                console.log('전체 키:', Object.keys(localStorage).length);
+                alert(`✅ 데이터 확인\n\n승인된 상담사: ${approvedCounselors.length}명\n대기 중인 상담사: ${pendingCounselors.length}명\n제출된 검사: ${submitted.length}건\n\n콘솔(F12)에서 상세 정보 확인 가능`);
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600"
+            >
+              🔍 데이터 확인
+            </button>
+            <button onClick={logout} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              로그아웃
+            </button>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow p-6">
