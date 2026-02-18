@@ -247,6 +247,344 @@ function PsychologicalTestSystem() {
     console.log('📊 제출 목록 로드:', list.length + '건');
   }
 
+  // 📄 PDF 생성 함수들
+  async function generateSctPdf(sessionData) {
+    try {
+      console.log('📄 SCT PDF 생성 시작...');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // 한글 폰트 설정 (기본 폰트 사용)
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // 헤더
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('문장완성검사 (SCT) 결과 리포트', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Sentence Completion Test Report', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+
+      // 기본 정보
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 1. Basic Information ]', margin, yPos);
+      yPos += 8;
+      
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('ko-KR')}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`User Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      yPos += 10;
+
+      // 카테고리별 응답 및 AI 분석
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 2. Category Analysis ]', margin, yPos);
+      yPos += 8;
+
+      for (const cat of sctCategories) {
+        // 페이지 넘김 체크
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(`${cat.emoji} ${cat.name}`, margin + 5, yPos);
+        yPos += 7;
+
+        const catQs = sctQ.filter(q => q.cat === cat.name);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(9);
+
+        for (const q of catQs) {
+          const answer = sessionData.responses[q.num] || '(No answer)';
+          
+          // 질문
+          if (yPos > pageHeight - 30) {
+            doc.addPage();
+            yPos = margin;
+          }
+          
+          const questionText = `Q${q.num}. ${q.txt}`;
+          const questionLines = doc.splitTextToSize(questionText, pageWidth - margin * 2 - 10);
+          doc.text(questionLines, margin + 10, yPos);
+          yPos += questionLines.length * 5;
+          
+          // 답변
+          const answerText = `A: ${answer}`;
+          const answerLines = doc.splitTextToSize(answerText, pageWidth - margin * 2 - 10);
+          doc.setTextColor(0, 102, 204);
+          doc.text(answerLines, margin + 10, yPos);
+          doc.setTextColor(0, 0, 0);
+          yPos += answerLines.length * 5 + 3;
+        }
+
+        // AI 분석 추가
+        if (sessionData.summaries && sessionData.summaries[cat.name]) {
+          if (yPos > pageHeight - 30) {
+            doc.addPage();
+            yPos = margin;
+          }
+
+          doc.setFont(undefined, 'bold');
+          doc.setFontSize(9);
+          doc.text('AI Analysis:', margin + 10, yPos);
+          yPos += 6;
+
+          doc.setFont(undefined, 'normal');
+          doc.setFontSize(8);
+          const summaryLines = doc.splitTextToSize(sessionData.summaries[cat.name], pageWidth - margin * 2 - 15);
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margin + 10, yPos - 4, pageWidth - margin * 2 - 10, summaryLines.length * 4 + 4, 'F');
+          doc.text(summaryLines, margin + 12, yPos);
+          yPos += summaryLines.length * 4 + 8;
+        }
+
+        yPos += 5;
+      }
+
+      // 푸터
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('ko-KR')}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // 다운로드
+      const fileName = `SCT_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+      console.log('✅ SCT PDF 생성 완료:', fileName);
+      alert('✅ SCT 검사 결과 PDF가 다운로드되었습니다!');
+    } catch (error) {
+      console.error('❌ PDF 생성 실패:', error);
+      alert('❌ PDF 생성 중 오류가 발생했습니다: ' + error.message);
+    }
+  }
+
+  async function generateDsiPdf(sessionData) {
+    try {
+      console.log('📄 DSI PDF 생성 시작...');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+
+      // 임시로 응답 복원
+      const tempDsiResponses = sessionData.responses;
+      
+      // 점수 계산
+      let total = 0;
+      const areas = { "가족불화": 0, "부모관계": 0, "형제관계": 0, "가족퇴행": 0, "투사": 0 };
+      dsiQ.forEach(q => {
+        const r = tempDsiResponses[q.num];
+        if (r) {
+          const s = q.rev ? 6 - r : r;
+          total += s;
+          areas[q.area] += s;
+        }
+      });
+
+      // 헤더
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('가족관계검사 (DSI) 결과 리포트', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Differentiation of Self Inventory Report', pageWidth / 2, yPos, { align: 'center' });
+      
+      yPos += 15;
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 10;
+
+      // 기본 정보
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 1. Basic Information ]', margin, yPos);
+      yPos += 8;
+      
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('ko-KR')}`, margin + 5, yPos);
+      yPos += 6;
+      doc.text(`User Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      yPos += 12;
+
+      // 종합 점수
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 2. Overall Score ]', margin, yPos);
+      yPos += 8;
+
+      const level = total >= 109 ? 'High' : total >= 73 ? 'Medium' : 'Low';
+      const levelKr = total >= 109 ? '높음' : total >= 73 ? '중간' : '낮음';
+      const levelColor = total >= 109 ? [255, 87, 87] : total >= 73 ? [255, 193, 7] : [76, 175, 80];
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Total Score: ${total} / 180`, margin + 5, yPos);
+      yPos += 6;
+      
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(...levelColor);
+      doc.text(`Level: ${levelKr} (${level})`, margin + 5, yPos);
+      doc.setTextColor(0, 0, 0);
+      yPos += 12;
+
+      // 영역별 점수
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 3. Area Scores ]', margin, yPos);
+      yPos += 8;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+
+      const areaNames = Object.keys(areas);
+      for (const areaName of areaNames) {
+        if (yPos > pageHeight - 30) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const score = areas[areaName];
+        const areaQs = dsiQ.filter(q => q.area === areaName);
+        const maxScore = areaQs.length * 5;
+        const avgScore = (score / areaQs.length).toFixed(1);
+
+        doc.text(`${areaName}: ${score} / ${maxScore} (Avg: ${avgScore})`, margin + 5, yPos);
+        
+        // 진행 바
+        const barWidth = 100;
+        const barHeight = 4;
+        const fillWidth = (score / maxScore) * barWidth;
+        
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.rect(margin + 60, yPos - 3, barWidth, barHeight);
+        
+        doc.setFillColor(...levelColor);
+        doc.rect(margin + 60, yPos - 3, fillWidth, barHeight, 'F');
+        
+        yPos += 8;
+      }
+
+      yPos += 5;
+
+      // 상세 응답
+      doc.addPage();
+      yPos = margin;
+      
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('[ 4. Detailed Responses ]', margin, yPos);
+      yPos += 8;
+
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+
+      for (const q of dsiQ) {
+        if (yPos > pageHeight - 20) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        const answer = tempDsiResponses[q.num] || 'N/A';
+        const scoreText = q.rev ? `(Reversed, Score: ${6 - parseInt(answer)})` : `(Score: ${answer})`;
+        
+        const questionText = `Q${q.num}. ${q.txt}`;
+        const questionLines = doc.splitTextToSize(questionText, pageWidth - margin * 2 - 10);
+        doc.text(questionLines, margin + 5, yPos);
+        yPos += questionLines.length * 4;
+        
+        doc.setTextColor(0, 102, 204);
+        doc.text(`Answer: ${answer} ${scoreText} | Area: ${q.area}`, margin + 5, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+      }
+
+      // AI 권장사항 (있는 경우)
+      if (sessionData.recommendation) {
+        doc.addPage();
+        yPos = margin;
+
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text('[ 5. AI Recommendations ]', margin, yPos);
+        yPos += 8;
+
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+
+        const recLines = doc.splitTextToSize(sessionData.recommendation, pageWidth - margin * 2 - 5);
+        doc.text(recLines, margin + 5, yPos);
+      }
+
+      // 푸터
+      const totalPages = doc.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('ko-KR')}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      }
+
+      // 다운로드
+      const fileName = `DSI_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
+      doc.save(fileName);
+      console.log('✅ DSI PDF 생성 완료:', fileName);
+      alert('✅ DSI 검사 결과 PDF가 다운로드되었습니다!');
+    } catch (error) {
+      console.error('❌ PDF 생성 실패:', error);
+      alert('❌ PDF 생성 중 오류가 발생했습니다: ' + error.message);
+    }
+  }
+
   function copyLink(linkId) {
     const text = linkId;
     try {
@@ -584,8 +922,18 @@ function PsychologicalTestSystem() {
 
   function viewSession(sid) {
     const r = storage.get("session_" + sid);
-    if (!r) return;
+    if (!r) return null;
     const data = JSON.parse(r.value);
+    
+    // PDF 생성을 위해 데이터 반환
+    if (typeof sid === 'string' && sid.length > 0) {
+      // 뷰 전환 없이 데이터만 반환 (PDF 생성용)
+      if (arguments.length === 1) {
+        return data;
+      }
+    }
+    
+    // 일반 뷰어 모드
     if (data.testType === "SCT") {
       setSctResponses(data.responses || {});
       setSctSummaries(data.summaries || {});
@@ -594,6 +942,7 @@ function PsychologicalTestSystem() {
     }
     setSessionId(sid);
     setView(data.testType === "SCT" ? "sctResult" : "dsiResult");
+    return data;
   }
 
   // ✅ SCT AI 권장사항 생성 (룰 기반)
@@ -1283,9 +1632,22 @@ function PsychologicalTestSystem() {
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-800">📝 SCT 검사 결과</h1>
-          <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-            ← 목록
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => {
+                const sessionData = viewSession(sessionId);
+                if (sessionData) {
+                  generateSctPdf(sessionData);
+                }
+              }} 
+              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 font-bold transition flex items-center gap-2"
+            >
+              📄 PDF 다운로드
+            </button>
+            <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
         </div>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <p className="text-sm text-blue-700"><strong>세션 ID:</strong> {sessionId}</p>
@@ -1344,9 +1706,22 @@ function PsychologicalTestSystem() {
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-green-800">🔍 DSI 검사 결과</h1>
-            <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
-              ← 목록
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  const sessionData = viewSession(sessionId);
+                  if (sessionData) {
+                    generateDsiPdf(sessionData);
+                  }
+                }} 
+                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 font-bold transition flex items-center gap-2"
+              >
+                📄 PDF 다운로드
+              </button>
+              <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+                ← 목록
+              </button>
+            </div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-green-700"><strong>세션 ID:</strong> {sessionId}</p>
