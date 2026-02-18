@@ -369,6 +369,30 @@ function PsychologicalTestSystem() {
   }
 
   function copyLink(linkId) {
+    const text = linkId;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedId(linkId);
+        setTimeout(() => setCopiedId(null), 2500);
+      }).catch(() => fallbackCopy(linkId, text));
+    } catch {
+      fallbackCopy(linkId, text);
+    }
+  }
+  
+  function fallbackCopy(linkId, text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    setCopiedId(linkId);
+    setTimeout(() => setCopiedId(null), 2500);
+  }
+
+  // 📄 PDF 생성 함수들
   async function generateSctPdf(sessionData) {
     try {
       console.log('📄 SCT PDF 생성 시작...');
