@@ -1,0 +1,1100 @@
+const { useState, useEffect } = React;
+
+// 전역 저장소
+const memStore = {};
+const storage = {
+  get: (key) => memStore[key] ? { value: memStore[key] } : null,
+  set: (key, value) => { memStore[key] = value; return true; },
+};
+
+function PsychologicalTestSystem() {
+  const [view, setView] = useState("login");
+  const [activeLinkId, setActiveLinkId] = useState(null);
+  const [activeLinkData, setActiveLinkData] = useState(null);
+  const [userInfo, setUserInfo] = useState({ phone: "", password: "" });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isCounselor, setIsCounselor] = useState(false);
+  const [counselorPhone, setCounselorPhone] = useState("");
+  const [loginMsg, setLoginMsg] = useState({ type: "", text: "" });
+  const [counselorForm, setCounselorForm] = useState({
+    name: "", phone: "", password: "", certification: "", education: "", experience: ""
+  });
+  const [linkForm, setLinkForm] = useState({ clientName: "", clientPhone: "", testType: "SCT" });
+  const [generatedLinks, setGeneratedLinks] = useState([]);
+  const [copiedId, setCopiedId] = useState(null);
+  const [showLinkId, setShowLinkId] = useState(null);
+  const [sctResponses, setSctResponses] = useState({});
+  const [sctSummaries, setSctSummaries] = useState({});
+  const [loadingSummary, setLoadingSummary] = useState({});
+  const [dsiResponses, setDsiResponses] = useState({});
+  const [dsiRec, setDsiRec] = useState("");
+  const [loadingRec, setLoadingRec] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
+  const [sessionId, setSessionId] = useState(() => genId("session"));
+  const [submitted, setSubmitted] = useState([]);
+  const [pendingCounselors, setPendingCounselors] = useState([]);
+  const [approvedCounselors, setApprovedCounselors] = useState([]);
+  const [formMsg, setFormMsg] = useState({ type: "", text: "" });
+  const [linkInput, setLinkInput] = useState("");
+
+  function genId(prefix) {
+    return prefix + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
+  }
+
+  const counselingKw = [
+    "상담심리", "상담학", "심리상담", "임상심리", "상담복지", "상담교육", "상담치료", "심리치료", "정신건강", "심리학",
+    "청소년상담", "가족상담", "아동상담", "부부상담", "집단상담", "진로상담", "다문화상담", "중독상담", "재활상담",
+    "기독교상담", "목회상담", "코칭상담", "긍정심리", "치유상담", "사회복지", "특수교육", "아동학", "아동복지",
+    "교육심리", "청소년학", "교육상담", "정신보건", "미술치료", "음악치료", "놀이치료", "모래놀이", "심리재활",
+    "정신건강사회복지", "중독재활", "상담코칭", "심리코칭",
+  ];
+  
+  function checkEdu(edu) {
+    if (!edu) return { ok: false, kws: [] };
+    const kws = counselingKw.filter(k => edu.toLowerCase().includes(k));
+    return { ok: kws.length > 0, kws };
+  }
+
+  const sctCategories = {
+    "① 어머니에 대한 태도": [13, 26, 39, 49], "② 아버지에 대한 태도": [2, 19, 29, 50],
+    "③ 가족에 대한 태도": [12, 24, 35, 48], "④ 여성에 대한 태도": [9, 25],
+    "⑤ 남성에 대한 태도": [8, 20, 36], "⑥ 이성에 대한 태도": [10, 23],
+    "⑦ 친구나 친지에 대한 태도": [6, 22, 32, 44], "⑧ 권위자에 대한 태도": [3, 31],
+    "⑨ 두려움에 대한 태도": [5, 21, 40, 43], "⑩ 죄책감에 대한 태도": [14, 17, 27, 46],
+    "⑪ 자신의 능력에 대한 태도": [1, 15, 34, 38], "⑫ 과거에 대한 태도": [7, 33, 45],
+    "⑬ 미래에 대한 태도": [4, 11, 16, 18, 28], "⑭ 목표에 대한 태도": [30, 41, 42],
+  };
+  
+  const sctQ = {
+    1: "나에게 이상한 일이 생겼을 때", 2: "내 생각에 가끔 아버지는", 3: "우리 윗사람들은",
+    4: "나의 장래는", 5: "어리석게도 내가 두려워하는 것은", 6: "내 생각에 참다운 친구는",
+    7: "내가 어렸을 때는", 8: "남자에 대해서 무엇보다 좋지 않게 생각하는 것은", 9: "내가 바라는 여인상은",
+    10: "남녀가 같이 있는 것을 볼 때", 11: "내가 늘 원하기는", 12: "다른 가정과 비교해서 우리 집안은",
+    13: "나의 어머니는", 14: "무슨 일을 해서라도 잊고 싶은 것은", 15: "내가 믿고 있는 내 능력은",
+    16: "내가 정말 행복할 수 있으려면", 17: "어렸을 때 잘못했다고 느끼는 것은", 18: "내가 보는 나의 앞날은",
+    19: "대개 아버지들이란", 20: "내 생각에 남자들이란", 21: "다른 친구들이 모르는 나만의 두려움은",
+    22: "내가 싫어하는 사람은", 23: "결혼 생활에 대한 나의 생각은", 24: "우리 가족이 나에 대해서",
+    25: "내 생각에 여자들이란", 26: "어머니와 나는", 27: "내가 저지른 가장 큰 잘못은",
+    28: "언젠가 나는", 29: "내가 바라기에 아버지는", 30: "나의 야망은",
+    31: "윗사람이 오는 것을 보면 나는", 32: "내가 제일 좋아하는 사람은", 33: "내가 다시 젊어진다면",
+    34: "나의 가장 큰 결점은", 35: "내가 아는 대부분의 집안은", 36: "완전한 남성상(男性像)은",
+    37: "내가 성관계를 했다면", 38: "행운이 나를 외면했을 때", 39: "대개 어머니들이란",
+    40: "내가 잊고 싶은 두려움은", 41: "내가 평생 가장 하고 싶은 일은", 42: "내가 늙으면",
+    43: "때때로 두려운 생각이 나를 휩쌀 때", 44: "내가 없을 때 친구들은", 45: "생생한 어린 시절의 기억은",
+    46: "무엇보다도 좋지 않게 여기는 것은", 47: "나의 성생활은", 48: "내가 어렸을 때 우리 가족은",
+    49: "나는 어머니를 좋아했지만", 50: "아버지와 나는",
+  };
+
+  const dsiQ = [
+    { num: 1, content: "중요한 결정을 내릴 때 마음 내키는 대로 결정하는 일이 많다.", rev: true, area: "인지적 기능" },
+    { num: 2, content: "말부터 해 놓고 나중에 후회하는 일이 많다.", rev: true, area: "인지적 기능" },
+    { num: 3, content: "비교적 내 감정을 잘 통제해 나가는 편이다.", rev: false, area: "인지적 기능" },
+    { num: 4, content: "다른 사람의 기대에 맞추려고 노력한다.", rev: true, area: "인지적 기능" },
+    { num: 5, content: "가족의 의견에 쉽게 동요된다.", rev: true, area: "인지적 기능" },
+    { num: 6, content: "스트레스 받을 때 충동적으로 행동한다.", rev: true, area: "인지적 기능" },
+    { num: 7, content: "문제를 논리적으로 분석해 해결한다.", rev: false, area: "인지적 기능" },
+    { num: 8, content: "자신의 가치관을 일관되게 유지한다.", rev: false, area: "자아통합" },
+    { num: 9, content: "중요한 결정은 스스로 내린다.", rev: false, area: "자아통합" },
+    { num: 10, content: "타인의 압력에도 원칙을 지킨다.", rev: false, area: "자아통합" },
+    { num: 11, content: "가족 문제에 과도하게 개입한다.", rev: true, area: "자아통합" },
+    { num: 12, content: "가족 기대 때문에 자신의 길을 바꾼다.", rev: true, area: "자아통합" },
+    { num: 13, content: "자기 목표를 명확히 추구한다.", rev: false, area: "자아통합" },
+    { num: 14, content: "어릴 적 부모의 갈등이 나에게 영향을 줬다.", rev: true, area: "가족투사" },
+    { num: 15, content: "부모 중 한 명에게 더 의존했다.", rev: true, area: "가족투사" },
+    { num: 16, content: "형제 중 특정 한 명이 문제 자녀였다.", rev: true, area: "가족투사" },
+    { num: 17, content: "가족 문제가 나의 선택에 영향을 줬다.", rev: true, area: "가족투사" },
+    { num: 18, content: "가족의 기대를 저버린 적이 거의 없다.", rev: true, area: "가족투사" },
+    { num: 19, content: "부모의 불화가 내 삶에 남아있다.", rev: true, area: "가족투사" },
+    { num: 20, content: "가족과 적절한 거리를 유지한다.", rev: false, area: "정서적 단절" },
+    { num: 21, content: "가족 갈등 시 멀리 도망간다.", rev: true, area: "정서적 단절" },
+    { num: 22, content: "가족과 연락을 최소화한다.", rev: true, area: "정서적 단절" },
+    { num: 23, content: "가족 모임에 불편함을 느낀다.", rev: true, area: "정서적 단절" },
+    { num: 24, content: "가족 문제에 무관심하다.", rev: true, area: "정서적 단절" },
+    { num: 25, content: "가족 전체가 스트레스 시 퇴행한다.", rev: true, area: "가족퇴행" },
+    { num: 26, content: "가족 모임에서 합리적으로 행동한다.", rev: false, area: "가족퇴행" },
+    { num: 27, content: "가족이 나의 독립을 존중한다.", rev: false, area: "가족퇴행" },
+    { num: 28, content: "가족 갈등을 논리적으로 해결한다.", rev: false, area: "가족퇴행" },
+    { num: 29, content: "가족 내 역할이 명확하다.", rev: false, area: "가족퇴행" },
+    { num: 30, content: "가족이 서로 자율성을 가진다.", rev: false, area: "가족퇴행" },
+    { num: 31, content: "가족 스트레스 시 침착하다.", rev: false, area: "가족퇴행" },
+    { num: 32, content: "가족 관계가 안정적이다.", rev: false, area: "가족퇴행" },
+    { num: 33, content: "우리 가족은 서로 과잉보호적이다.", rev: true, area: "가족퇴행" },
+    { num: 34, content: "가족이 감정적으로 의지한다.", rev: true, area: "가족퇴행" },
+    { num: 35, content: "가족 모임이 피곤하다.", rev: true, area: "가족퇴행" },
+    { num: 36, content: "우리 가족들은 서로에 대해 별 관심이 없었다.", rev: true, area: "가족퇴행" },
+  ];
+
+  function calcDsi() {
+    let total = 0;
+    const areas = { "인지적 기능": 0, "자아통합": 0, "가족투사": 0, "정서적 단절": 0, "가족퇴행": 0 };
+    dsiQ.forEach(q => {
+      const r = dsiResponses[q.num];
+      if (r) {
+        const s = q.rev ? 6 - r : r;
+        total += s;
+        areas[q.area] += s;
+      }
+    });
+    return { total, areas };
+  }
+
+  function storeLink(d) {
+    storage.set("link_" + d.linkId, JSON.stringify(d));
+  }
+  
+  function loadLink(id) {
+    const r = storage.get("link_" + id);
+    return r ? JSON.parse(r.value) : null;
+  }
+  
+  function storeSession(data) {
+    storage.set("session_" + data.sessionId, JSON.stringify(data));
+    const listRaw = storage.get("submitted_list");
+    const list = listRaw ? JSON.parse(listRaw.value) : [];
+    list.unshift({
+      sessionId: data.sessionId,
+      testType: data.testType,
+      userPhone: data.userPhone,
+      createdAt: data.createdAt,
+      linkId: data.linkId
+    });
+    storage.set("submitted_list", JSON.stringify(list));
+    setSubmitted(list);
+  }
+  
+  function loadAllSubmitted() {
+    const r = storage.get("submitted_list");
+    const list = r ? JSON.parse(r.value) : [];
+    setSubmitted(list);
+  }
+
+  function copyLink(linkId) {
+    const text = linkId;
+    try {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedId(linkId);
+        setTimeout(() => setCopiedId(null), 2500);
+      }).catch(() => fallbackCopy(linkId, text));
+    } catch {
+      fallbackCopy(linkId, text);
+    }
+  }
+  
+  function fallbackCopy(linkId, text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    setCopiedId(linkId);
+    setTimeout(() => setCopiedId(null), 2500);
+  }
+
+  function generateLink() {
+    if (!linkForm.clientName || !linkForm.clientPhone) {
+      setFormMsg({ type: "error", text: "내담자 이름과 전화번호를 입력해주세요." });
+      return;
+    }
+    const linkId = genId("link");
+    const data = {
+      linkId,
+      counselorPhone,
+      clientName: linkForm.clientName,
+      clientPhone: linkForm.clientPhone,
+      testType: linkForm.testType,
+      createdAt: new Date().toISOString(),
+      status: "pending"
+    };
+    storeLink(data);
+    setGeneratedLinks(prev => [data, ...prev]);
+    setLinkForm({ clientName: "", clientPhone: "", testType: "SCT" });
+    setFormMsg({ type: "success", text: "링크가 생성되었습니다! 📋 링크 ID 복사 버튼으로 내담자에게 전달하세요." });
+    setTimeout(() => setFormMsg({ type: "", text: "" }), 4000);
+  }
+
+  function enterByLinkId() {
+    const id = linkInput.trim();
+    if (!id) {
+      setLoginMsg({ type: "error", text: "링크 ID를 입력해주세요." });
+      return;
+    }
+    const data = loadLink(id);
+    if (!data) {
+      setLoginMsg({ type: "error", text: "유효하지 않은 링크 ID입니다. 상담사에게 다시 확인하세요." });
+      return;
+    }
+    setActiveLinkId(id);
+    setActiveLinkData(data);
+    setLoginMsg({ type: "", text: "" });
+    setView("clientLogin");
+  }
+
+  function clientLogin() {
+    if (!userInfo.phone || !userInfo.password) {
+      setLoginMsg({ type: "error", text: "전화번호와 비밀번호를 모두 입력해주세요." });
+      return;
+    }
+    if (!activeLinkData) {
+      setLoginMsg({ type: "error", text: "링크 정보가 없습니다." });
+      return;
+    }
+    const inp = userInfo.phone.replace(/-/g, "");
+    const reg = activeLinkData.clientPhone.replace(/-/g, "");
+    if (inp !== reg) {
+      setLoginMsg({ type: "error", text: "등록된 전화번호와 일치하지 않습니다." });
+      return;
+    }
+    setLoginMsg({ type: "", text: "" });
+    setSctResponses({});
+    setSctSummaries({});
+    setDsiResponses({});
+    setSessionId(genId("session"));
+    setView(activeLinkData.testType === "SCT" ? "sctTest" : "dsiTest");
+  }
+
+  function adminLogin() {
+    if (userInfo.phone === "limyj007" && userInfo.password === "SKplimyj007") {
+      setIsAdmin(true);
+      setView("admin");
+      loadAllSubmitted();
+      const r = storage.get("counselor_requests");
+      setPendingCounselors(r ? JSON.parse(r.value).filter(c => c.status === "pending") : []);
+      const a = storage.get("approved_counselors");
+      setApprovedCounselors(a ? JSON.parse(a.value) : []);
+    } else {
+      setLoginMsg({ type: "error", text: "관리자 계정 정보가 올바르지 않습니다." });
+    }
+  }
+
+  function counselorLogin() {
+    if (!userInfo.phone || !userInfo.password) {
+      setLoginMsg({ type: "error", text: "정보를 입력해주세요." });
+      return;
+    }
+    const r = storage.get("approved_counselors");
+    const list = r ? JSON.parse(r.value) : [];
+    const found = list.find(c => c.phone === userInfo.phone && c.password === userInfo.password);
+    if (found) {
+      setIsCounselor(true);
+      setCounselorPhone(found.phone);
+      const lr = storage.get("counselor_links_" + found.phone);
+      setGeneratedLinks(lr ? JSON.parse(lr.value) : []);
+      loadAllSubmitted();
+      setView("counselorDashboard");
+    } else {
+      setLoginMsg({ type: "error", text: "승인된 상담사가 아니거나 정보가 올바르지 않습니다." });
+    }
+  }
+
+  useEffect(() => {
+    if (isCounselor && counselorPhone) {
+      storage.set("counselor_links_" + counselorPhone, JSON.stringify(generatedLinks));
+    }
+  }, [generatedLinks, isCounselor, counselorPhone]);
+
+  function counselorSignup() {
+    if (!counselorForm.phone || !counselorForm.password || !counselorForm.education) {
+      setFormMsg({ type: "error", text: "전화번호, 비밀번호, 학력은 필수입니다." });
+      return;
+    }
+    const r = storage.get("counselor_requests");
+    const list = r ? JSON.parse(r.value) : [];
+    if (list.find(c => c.phone === counselorForm.phone)) {
+      setFormMsg({ type: "error", text: "이미 신청된 전화번호입니다." });
+      return;
+    }
+    const { ok, kws } = checkEdu(counselorForm.education);
+    list.push({
+      ...counselorForm,
+      eduOk: ok,
+      eduKws: kws,
+      requestDate: new Date().toISOString(),
+      status: "pending"
+    });
+    storage.set("counselor_requests", JSON.stringify(list));
+    setFormMsg({ type: "success", text: "가입 신청 완료! 관리자 승인 후 로그인 가능합니다." });
+    setCounselorForm({ name: "", phone: "", password: "", certification: "", education: "", experience: "" });
+    setTimeout(() => {
+      setView("counselorLogin");
+      setFormMsg({ type: "", text: "" });
+    }, 2500);
+  }
+
+  function approveCounselor(phone) {
+    const r = storage.get("counselor_requests");
+    let list = r ? JSON.parse(r.value) : [];
+    const target = list.find(c => c.phone === phone);
+    if (!target) return;
+    list = list.filter(c => c.phone !== phone);
+    storage.set("counselor_requests", JSON.stringify(list));
+    const a = storage.get("approved_counselors");
+    const approved = a ? JSON.parse(a.value) : [];
+    approved.push({ ...target, status: "approved", approvedDate: new Date().toISOString() });
+    storage.set("approved_counselors", JSON.stringify(approved));
+    setPendingCounselors(list.filter(c => c.status === "pending"));
+    setApprovedCounselors(approved);
+  }
+  
+  function rejectCounselor(phone) {
+    const r = storage.get("counselor_requests");
+    let list = r ? JSON.parse(r.value) : [];
+    list = list.filter(c => c.phone !== phone);
+    storage.set("counselor_requests", JSON.stringify(list));
+    setPendingCounselors(list.filter(c => c.status === "pending"));
+  }
+
+  function submitSct() {
+    const missing = Object.keys(sctQ).filter(n => !sctResponses[n]?.trim());
+    if (missing.length > 0) {
+      setSaveStatus("⚠️ " + missing.length + "개 문항이 비어 있습니다.");
+      return;
+    }
+    const data = {
+      sessionId,
+      testType: "SCT",
+      responses: sctResponses,
+      summaries: sctSummaries,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+  
+  function submitDsi() {
+    if (Object.keys(dsiResponses).length < 36) {
+      setSaveStatus("⚠️ " + (36 - Object.keys(dsiResponses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    const data = {
+      sessionId,
+      testType: "DSI",
+      responses: dsiResponses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+
+  function viewSession(sid) {
+    const r = storage.get("session_" + sid);
+    if (!r) return;
+    const data = JSON.parse(r.value);
+    if (data.testType === "SCT") {
+      setSctResponses(data.responses || {});
+      setSctSummaries(data.summaries || {});
+    } else {
+      setDsiResponses(data.responses || {});
+    }
+    setSessionId(sid);
+    setView(data.testType === "SCT" ? "sctResult" : "dsiResult");
+  }
+
+  function logout() {
+    setIsAdmin(false);
+    setIsCounselor(false);
+    setCounselorPhone("");
+    setUserInfo({ phone: "", password: "" });
+    setLoginMsg({ type: "", text: "" });
+    setSctResponses({});
+    setSctSummaries({});
+    setDsiResponses({});
+    setDsiRec("");
+    setActiveLinkId(null);
+    setActiveLinkData(null);
+    setGeneratedLinks([]);
+    setSubmitted([]);
+    setLinkInput("");
+    setView("login");
+  }
+
+  const Msg = ({ msg }) => !msg.text ? null : (
+    <div className={`mb-4 p-3 rounded-lg border-2 text-sm font-semibold ${msg.type === "success" ? "bg-green-50 border-green-400 text-green-800" : msg.type === "error" ? "bg-red-50 border-red-400 text-red-800" : "bg-blue-50 border-blue-400 text-blue-800"}`}>
+      {msg.text}
+    </div>
+  );
+
+  function getCounselorSessions() {
+    return submitted.filter(s => {
+      if (!s.linkId) return false;
+      const linkData = loadLink(s.linkId);
+      return linkData && linkData.counselorPhone === counselorPhone;
+    });
+  }
+
+  // ========== VIEWS ==========
+
+  if (view === "login") return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="text-5xl mb-3">🧠</div>
+          <h1 className="text-3xl font-bold text-gray-800">심리검사 시스템</h1>
+          <p className="text-gray-400 text-sm mt-1">상담사에게 받은 링크 ID로 검사를 시작하세요</p>
+        </div>
+        <Msg msg={loginMsg} />
+        <div className="bg-indigo-50 border-2 border-indigo-200 rounded-xl p-5 mb-5">
+          <p className="text-sm font-bold text-indigo-700 mb-3">📋 검사 응시 (내담자)</p>
+          <input
+            className="w-full px-4 py-3 border-2 border-indigo-300 rounded-lg outline-none focus:border-indigo-500 text-sm mb-3 font-mono"
+            placeholder="상담사에게 받은 링크 ID를 여기에 붙여넣으세요"
+            value={linkInput}
+            onChange={e => setLinkInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && enterByLinkId()}
+          />
+          <button onClick={enterByLinkId} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition text-base">
+            검사 시작하기 →
+          </button>
+        </div>
+        <div className="relative mb-5">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+          <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">전문가 전용</span></div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => { setLoginMsg({ type: "", text: "" }); setUserInfo({ phone: "", password: "" }); setView("adminLogin"); }} className="bg-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition text-sm">
+            🔐 관리자
+          </button>
+          <button onClick={() => { setLoginMsg({ type: "", text: "" }); setUserInfo({ phone: "", password: "" }); setView("counselorLogin"); }} className="bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition text-sm">
+            👨‍⚕️ 상담사
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "clientLogin") return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <button onClick={() => { setView("login"); setLoginMsg({ type: "", text: "" }); }} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">
+          ← 뒤로
+        </button>
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">{activeLinkData?.testType === "SCT" ? "📝" : "🔍"}</div>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {activeLinkData?.testType === "SCT" ? "문장완성검사 (SCT)" : "자아분화검사 (DSI)"}
+          </h1>
+          <div className="mt-2 inline-block bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-sm font-semibold">
+            내담자: {activeLinkData?.clientName}
+          </div>
+        </div>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4 text-sm text-teal-700">
+          ✅ 링크 확인 완료. 전화번호와 비밀번호를 입력해 검사를 시작하세요.
+        </div>
+        <Msg msg={loginMsg} />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">전화번호</label>
+            <input type="tel" value={userInfo.phone} onChange={e => setUserInfo({ ...userInfo, phone: e.target.value })} placeholder="010-1234-5678" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
+            <input type="password" value={userInfo.password} onChange={e => setUserInfo({ ...userInfo, password: e.target.value })} placeholder="사용하실 비밀번호를 입력하세요" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-500 outline-none" onKeyDown={e => e.key === "Enter" && clientLogin()} />
+            <p className="text-xs text-gray-400 mt-1">* 본인이 직접 설정하는 비밀번호입니다</p>
+          </div>
+          <button onClick={clientLogin} className="w-full bg-teal-600 text-white py-3 rounded-lg font-bold hover:bg-teal-700 transition text-lg">
+            검사 시작 →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "adminLogin") return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-slate-200 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm">
+        <button onClick={() => { setView("login"); setLoginMsg({ type: "", text: "" }); }} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">
+          ← 뒤로
+        </button>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">🔐 관리자 로그인</h1>
+        <Msg msg={loginMsg} />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">아이디</label>
+            <input type="text" value={userInfo.phone} onChange={e => setUserInfo({ ...userInfo, phone: e.target.value })} placeholder="관리자 아이디" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
+            <input type="password" value={userInfo.password} onChange={e => setUserInfo({ ...userInfo, password: e.target.value })} placeholder="관리자 비밀번호" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg outline-none" onKeyDown={e => e.key === "Enter" && adminLogin()} />
+          </div>
+          <button onClick={adminLogin} className="w-full bg-gray-800 text-white py-3 rounded-lg font-bold hover:bg-gray-900">
+            로그인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "counselorLogin") return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm">
+        <button onClick={() => { setView("login"); setLoginMsg({ type: "", text: "" }); }} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">
+          ← 뒤로
+        </button>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">👨‍⚕️ 상담사 로그인</h1>
+        <Msg msg={loginMsg} />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">전화번호</label>
+            <input type="tel" value={userInfo.phone} onChange={e => setUserInfo({ ...userInfo, phone: e.target.value })} placeholder="010-1234-5678" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">비밀번호</label>
+            <input type="password" value={userInfo.password} onChange={e => setUserInfo({ ...userInfo, password: e.target.value })} placeholder="비밀번호" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none" onKeyDown={e => e.key === "Enter" && counselorLogin()} />
+          </div>
+          <button onClick={counselorLogin} className="w-full bg-purple-700 text-white py-3 rounded-lg font-bold hover:bg-purple-800">
+            로그인
+          </button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+            <div className="relative flex justify-center"><span className="px-3 bg-white text-gray-400 text-xs">또는</span></div>
+          </div>
+          <button onClick={() => { setFormMsg({ type: "", text: "" }); setView("counselorSignup"); }} className="w-full bg-purple-100 text-purple-800 py-3 rounded-lg font-semibold hover:bg-purple-200">
+            상담사 가입 신청
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "counselorSignup") {
+    const { ok: eduOk, kws: eduKws } = checkEdu(counselorForm.education);
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg">
+          <button onClick={() => setView("counselorLogin")} className="text-gray-400 hover:text-gray-600 text-sm mb-5 flex items-center gap-1">
+            ← 뒤로
+          </button>
+          <h1 className="text-2xl font-bold mb-1 text-center">상담사 가입 신청</h1>
+          <p className="text-gray-400 text-sm text-center mb-5">관리자 승인 후 로그인 가능합니다</p>
+          <Msg msg={formMsg} />
+          <div className="space-y-4">
+            {[["이름", "name", "text", "홍길동"], ["전화번호 *", "phone", "tel", "010-1234-5678"], ["비밀번호 *", "password", "password", "4자리 이상"], ["자격증", "certification", "text", "청소년상담사 2급 등"]].map(([l, k, t, p]) => (
+              <div key={k}>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">{l}</label>
+                <input type={t} value={counselorForm[k]} onChange={e => setCounselorForm({ ...counselorForm, [k]: e.target.value })} placeholder={p} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none" />
+              </div>
+            ))}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">최종학력 *</label>
+              <input type="text" value={counselorForm.education} onChange={e => setCounselorForm({ ...counselorForm, education: e.target.value })} placeholder="OO대학교 상담심리학과 졸업" className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none" />
+              {counselorForm.education && (
+                <div className={`mt-1 text-xs px-3 py-2 rounded border ${eduOk ? "bg-green-50 border-green-300 text-green-800" : "bg-yellow-50 border-yellow-300 text-yellow-800"}`}>
+                  {eduOk ? `✅ 관련 학과: ${eduKws.join(", ")}` : "⚠️ 상담 관련 학과 미확인"}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">경력</label>
+              <textarea value={counselorForm.experience} onChange={e => setCounselorForm({ ...counselorForm, experience: e.target.value })} placeholder="상담 경력, 근무 경험 등" rows={3} className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 outline-none resize-none" />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button onClick={counselorSignup} className="flex-1 bg-purple-700 text-white py-3 rounded-lg font-bold hover:bg-purple-800">
+                가입 신청
+              </button>
+              <button onClick={() => setView("counselorLogin")} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "counselorDashboard") {
+    const counselorSessions = getCounselorSessions();
+    
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-5xl mx-auto space-y-4">
+          <div className="bg-white rounded-xl shadow p-4 flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold">👨‍⚕️ 상담사 대시보드</h1>
+              <p className="text-sm text-gray-400">{counselorPhone}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => { loadAllSubmitted(); setView("counselorResults"); }} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 relative">
+                📊 제출된 검사
+                {counselorSessions.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    {counselorSessions.length}
+                  </span>
+                )}
+              </button>
+              <button onClick={logout} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+                로그아웃
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">🔗 검사 링크 생성</h2>
+            <Msg msg={formMsg} />
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1">내담자 이름</label>
+                <input value={linkForm.clientName} onChange={e => setLinkForm({ ...linkForm, clientName: e.target.value })} placeholder="홍길동" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-400 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-600 mb-1">내담자 전화번호</label>
+                <input type="tel" value={linkForm.clientPhone} onChange={e => setLinkForm({ ...linkForm, clientPhone: e.target.value })} placeholder="010-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-400 outline-none" />
+              </div>
+            </div>
+            <div className="flex gap-3 mb-4">
+              {[["SCT", "📝 문장완성검사"], ["DSI", "🔍 자아분화검사"]].map(([v, l]) => (
+                <button key={v} onClick={() => setLinkForm({ ...linkForm, testType: v })} className={`flex-1 py-3 rounded-xl font-semibold border-2 transition ${linkForm.testType === v ? "border-purple-500 bg-purple-50 text-purple-800" : "border-gray-200 text-gray-500 hover:border-purple-300"}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <button onClick={generateLink} className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-purple-700 transition">
+              ✨ 검사 링크 생성
+            </button>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">생성된 링크 ({generatedLinks.length}건)</h2>
+            {generatedLinks.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <div className="text-4xl mb-2">🔗</div>
+                <p>생성된 링크가 없습니다</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {generatedLinks.map((link, i) => (
+                  <div key={i} className={`border-2 rounded-xl p-4 transition ${link.status === "completed" ? "border-green-200 bg-green-50" : "border-gray-100 hover:border-purple-200"}`}>
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="font-bold text-gray-800 text-base">{link.clientName}</span>
+                          <span className="text-gray-500 text-sm">{link.clientPhone}</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${link.testType === "SCT" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                            {link.testType}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${link.status === "completed" ? "bg-green-200 text-green-800" : "bg-yellow-100 text-yellow-700"}`}>
+                            {link.status === "completed" ? "✅ 완료" : "⏳ 대기중"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400">생성: {new Date(link.createdAt).toLocaleString("ko-KR")}</p>
+                        {showLinkId === link.linkId && (
+                          <div className="mt-3 bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                            <p className="text-xs text-indigo-600 font-bold mb-2">📋 내담자에게 아래 ID를 전달하세요:</p>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs bg-white border border-indigo-300 rounded px-3 py-2 text-indigo-800 font-mono break-all select-all cursor-text">
+                                {link.linkId}
+                              </code>
+                            </div>
+                            <p className="text-xs text-indigo-400 mt-2">내담자는 메인 화면에서 이 ID를 입력 → 전화번호 확인 → 검사 시작</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <button onClick={() => copyLink(link.linkId)} className={`px-4 py-2 rounded-lg text-sm font-bold transition whitespace-nowrap ${copiedId === link.linkId ? "bg-green-500 text-white" : "bg-indigo-600 text-white hover:bg-indigo-700"}`}>
+                          {copiedId === link.linkId ? "✅ 복사됨!" : "📋 링크 ID 복사"}
+                        </button>
+                        <button onClick={() => setShowLinkId(showLinkId === link.linkId ? null : link.linkId)} className="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
+                          {showLinkId === link.linkId ? "🔼 닫기" : "🔍 ID 보기"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {counselorSessions.length > 0 && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-gray-800">📊 최근 제출된 검사 ({counselorSessions.length}건)</h2>
+                <button onClick={() => setView("counselorResults")} className="text-sm text-purple-600 font-semibold hover:text-purple-800">
+                  전체 보기 →
+                </button>
+              </div>
+              <div className="space-y-2">
+                {counselorSessions.slice(0, 3).map((s, idx) => (
+                  <div key={s.sessionId} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-400 text-sm font-semibold">{idx + 1}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${s.testType === "SCT" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                        {s.testType}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700">{s.userPhone}</p>
+                        <p className="text-xs text-gray-400">{new Date(s.createdAt).toLocaleString("ko-KR")}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => viewSession(s.sessionId)} className="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700">
+                      결과 보기
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 text-sm text-indigo-800">
+            <p className="font-bold mb-2">📌 내담자 검사 진행 방법</p>
+            <ol className="space-y-1 list-decimal list-inside text-indigo-700 text-sm">
+              <li>링크 생성 후 <strong>📋 링크 ID 복사</strong> 클릭</li>
+              <li>복사된 ID를 문자/카카오톡으로 내담자에게 전달</li>
+              <li>내담자가 메인 화면에서 ID 입력 → 전화번호 + 비밀번호 입력 → 검사 시작</li>
+              <li>검사 완료 후 상태가 <strong>✅ 완료</strong>로 변경되며, 위에 제출된 검사로 표시됨</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "counselorResults") {
+    const counselorSessions = getCounselorSessions();
+    
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-5xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-xl font-bold">📊 제출된 검사 목록 ({counselorSessions.length}건)</h1>
+            <div className="flex gap-2">
+              <button onClick={() => loadAllSubmitted()} className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600">
+                🔄 새로고침
+              </button>
+              <button onClick={() => setView("counselorDashboard")} className="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg text-sm font-semibold">
+                ← 대시보드
+              </button>
+              <button onClick={logout} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm">
+                로그아웃
+              </button>
+            </div>
+          </div>
+          <SessionList sessions={counselorSessions} onView={viewSession} />
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "sctTest") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-blue-800 mb-1">📝 문장완성검사 (SCT)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">아래 문장을 자유롭게 완성해 주세요 (50문항)</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-700 mb-6 text-center">
+          진행: <strong>{Object.values(sctResponses).filter(v => v?.trim()).length}</strong> / 50 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-4">
+          {Object.keys(sctQ).map(n => (
+            <div key={n} className="border-b border-gray-100 pb-4">
+              <label className="block mb-1.5 font-semibold text-gray-700 text-sm">{n}. {sctQ[n]}</label>
+              <input type="text" value={sctResponses[n] || ""} onChange={e => setSctResponses(p => ({ ...p, [n]: e.target.value }))} placeholder="답변을 입력하세요..." className={`w-full px-4 py-2.5 border-2 rounded-lg outline-none text-sm transition ${sctResponses[n]?.trim() ? "border-green-300 bg-green-50 focus:border-green-500" : "border-gray-200 focus:border-blue-400"}`} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitSct} className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-blue-700 transition">
+            검사 제출 ({Object.values(sctResponses).filter(v => v?.trim()).length}/50)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "dsiTest") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-green-800 mb-1">🔍 자아분화검사 (DSI)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">각 문항에 해당하는 번호를 선택하세요 (36문항)</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-xs text-green-800">
+          <div className="flex flex-wrap gap-3">
+            {["1: 전혀 아니다", "2: 거의 아니다", "3: 어쩌다 그렇다", "4: 자주 그렇다", "5: 항상 그렇다"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {dsiQ.map(q => (
+            <div key={q.num} className={`border-2 rounded-xl p-4 transition ${dsiResponses[q.num] ? "border-green-300 bg-green-50" : "border-gray-100"}`}>
+              <div className="flex items-start gap-2 mb-3">
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded shrink-0 mt-0.5">{q.area}</span>
+                <p className="text-sm font-semibold text-gray-700">{q.num}. {q.content}</p>
+              </div>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(s => (
+                  <button key={s} onClick={() => setDsiResponses(p => ({ ...p, [q.num]: s }))} className={`flex-1 py-2 rounded-lg font-bold text-sm border-2 transition ${dsiResponses[q.num] === s ? "bg-green-600 text-white border-green-600" : "bg-white border-gray-300 text-gray-500 hover:border-green-400"}`}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitDsi} disabled={Object.keys(dsiResponses).length < 36} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+            검사 제출 ({Object.keys(dsiResponses).length}/36)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "complete") return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
+        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">검사 완료!</h1>
+        <p className="text-gray-500 mb-6">
+          검사가 성공적으로 제출되었습니다.
+          <br />
+          상담사가 결과를 확인할 예정입니다.
+        </p>
+        <button onClick={logout} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition">
+          처음으로 돌아가기
+        </button>
+      </div>
+    </div>
+  );
+
+  if (view === "sctResult") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-blue-800">📝 SCT 검사 결과</h1>
+          <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+            ← 목록
+          </button>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-blue-700"><strong>세션 ID:</strong> {sessionId}</p>
+          <p className="text-sm text-blue-700"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+        </div>
+        <div className="space-y-6">
+          {Object.entries(sctCategories).map(([cat, nums]) => (
+            <div key={cat} className="border border-gray-200 rounded-xl p-5">
+              <h3 className="font-bold text-lg text-gray-800 mb-3">{cat}</h3>
+              <div className="space-y-2 mb-4">
+                {nums.map(n => (
+                  <div key={n} className="bg-gray-50 rounded p-3">
+                    <p className="text-xs text-gray-500 mb-1">{n}. {sctQ[n]}</p>
+                    <p className="text-sm font-semibold text-gray-800">{sctResponses[n] || "(미응답)"}</p>
+                  </div>
+                ))}
+              </div>
+              {sctSummaries[cat] && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded p-3">
+                  <p className="text-xs text-indigo-600 font-bold mb-1">💡 AI 요약</p>
+                  <p className="text-sm text-indigo-800 whitespace-pre-wrap">{sctSummaries[cat]}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-400">💡 AI 요약 기능은 API 키 설정 후 사용 가능합니다</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (view === "dsiResult") {
+    const { total, areas } = calcDsi();
+    const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
+    
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-green-800">🔍 DSI 검사 결과</h1>
+            <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-green-700"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm text-green-700"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg text-green-800 font-bold mt-2">총점: {total}/180 ({level})</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {Object.entries(areas).map(([area, score]) => (
+              <div key={area} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-2">{area}</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 bg-gray-200 rounded-full h-3">
+                    <div className="bg-green-600 h-3 rounded-full" style={{ width: `${(score / 36) * 100}%` }} />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700">{score}/36</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-3">
+            {dsiQ.map(q => (
+              <div key={q.num} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm text-gray-700 flex-1">{q.num}. {q.content}</p>
+                  <span className={`px-3 py-1 rounded font-bold text-sm ${dsiResponses[q.num] ? "bg-green-600 text-white" : "bg-gray-300 text-gray-600"}`}>
+                    {dsiResponses[q.num] || "-"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {dsiRec && (
+            <div className="mt-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+              <p className="font-bold text-indigo-800 mb-2">💡 AI 상담 권장사항</p>
+              <p className="text-sm text-indigo-700 whitespace-pre-wrap">{dsiRec}</p>
+            </div>
+          )}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-400">💡 AI 권장사항 기능은 API 키 설정 후 사용 가능합니다</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "admin") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-6xl mx-auto space-y-4">
+        <div className="bg-white rounded-xl shadow p-4 flex justify-between items-center">
+          <h1 className="text-xl font-bold">🔐 관리자 대시보드</h1>
+          <button onClick={logout} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+            로그아웃
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">👨‍⚕️ 상담사 승인 대기 ({pendingCounselors.length}건)</h2>
+          {pendingCounselors.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <p>대기 중인 신청이 없습니다</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingCounselors.map((c, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-800">{c.name || "이름 미입력"} ({c.phone})</p>
+                      <p className="text-sm text-gray-600">자격증: {c.certification || "없음"}</p>
+                      <p className="text-sm text-gray-600">학력: {c.education}</p>
+                      <p className="text-sm text-gray-600">경력: {c.experience || "없음"}</p>
+                      <div className={`mt-2 inline-block px-2 py-1 rounded text-xs font-bold ${c.eduOk ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+                        {c.eduOk ? `✅ 관련 학과: ${c.eduKws.join(", ")}` : "⚠️ 상담 관련 학과 미확인"}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">신청일: {new Date(c.requestDate).toLocaleString("ko-KR")}</p>
+                    </div>
+                    <div className="flex gap-2 ml-4">
+                      <button onClick={() => approveCounselor(c.phone)} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700">
+                        ✓ 승인
+                      </button>
+                      <button onClick={() => rejectCounselor(c.phone)} className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-600">
+                        ✗ 거부
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">✅ 승인된 상담사 ({approvedCounselors.length}명)</h2>
+          {approvedCounselors.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              <p>승인된 상담사가 없습니다</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {approvedCounselors.map((c, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="font-bold text-gray-800">{c.name || "이름 미입력"} ({c.phone})</p>
+                    <p className="text-xs text-gray-400">승인일: {new Date(c.approvedDate).toLocaleString("ko-KR")}</p>
+                  </div>
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">활성</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-6">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">📊 전체 제출된 검사 ({submitted.length}건)</h2>
+          <SessionList sessions={submitted} onView={viewSession} />
+        </div>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
+function SessionList({ sessions, onView }) {
+  if (sessions.length === 0) return (
+    <div className="text-center py-12 text-gray-400">
+      <div className="text-5xl mb-3">📋</div>
+      <p>제출된 검사가 없습니다</p>
+    </div>
+  );
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="bg-gray-100">
+            {["#", "검사 유형", "전화번호", "제출 시간", "결과"].map(h => <th key={h} className="border p-2 text-left">{h}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {sessions.map((s, i) => (
+            <tr key={s.sessionId} className="hover:bg-gray-50">
+              <td className="border p-2 text-center text-gray-400">{i + 1}</td>
+              <td className="border p-2">
+                <span className={`px-2 py-0.5 rounded text-xs font-bold ${s.testType === "SCT" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                  {s.testType === "SCT" ? "📝 문장완성" : "🔍 자아분화"}
+                </span>
+              </td>
+              <td className="border p-2">{s.userPhone}</td>
+              <td className="border p-2">{new Date(s.createdAt).toLocaleString("ko-KR")}</td>
+              <td className="border p-2">
+                <button onClick={() => onView(s.sessionId)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700">
+                  결과 보기
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// Render
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<PsychologicalTestSystem />);
