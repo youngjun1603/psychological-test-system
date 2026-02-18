@@ -247,7 +247,128 @@ function PsychologicalTestSystem() {
     console.log('📊 제출 목록 로드:', list.length + '건');
   }
 
-  // 📄 PDF 생성 함수들
+  // 🕐 24시간 만료 체크 및 자동 삭제 함수
+  function checkAndCleanExpiredSessions() {
+    console.log('🕐 만료된 검사 결과 확인 시작...');
+    const listRaw = storage.get("submitted_list");
+    if (!listRaw) return;
+    
+    const list = JSON.parse(listRaw.value);
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24시간 (밀리초)
+    
+    const validSessions = [];
+    let deletedCount = 0;
+    
+    list.forEach(session => {
+      const createdTime = new Date(session.createdAt).getTime();
+      const age = now - createdTime;
+      
+      if (age >= TWENTY_FOUR_HOURS) {
+        // 24시간 경과 - 삭제
+        storage.remove("session_" + session.sessionId);
+        deletedCount++;
+        console.log(`🗑️ 만료된 검사 삭제: ${session.sessionId} (생성: ${session.createdAt})`);
+      } else {
+        validSessions.push(session);
+      }
+    });
+    
+    if (deletedCount > 0) {
+      storage.set("submitted_list", JSON.stringify(validSessions));
+      setSubmitted(validSessions);
+      console.log(`✅ 만료된 검사 ${deletedCount}건 삭제 완료`);
+    } else {
+      console.log('✅ 만료된 검사 없음');
+    }
+  }
+
+  // ⏱️ 남은 시간 계산 (밀리초 → 시:분:초)
+  function getTimeRemaining(createdAt) {
+    const now = Date.now();
+    const createdTime = new Date(createdAt).getTime();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const elapsed = now - createdTime;
+    const remaining = TWENTY_FOUR_HOURS - elapsed;
+    
+    if (remaining <= 0) {
+      return { expired: true, text: "만료됨", color: "text-red-600" };
+    }
+    
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+    
+    let color = "text-green-600";
+    if (hours < 3) color = "text-red-600";
+    else if (hours < 6) color = "text-orange-600";
+    
+    return {
+      expired: false,
+      text: `${hours}시간 ${minutes}분 ${seconds}초`,
+      color: color,
+      hours: hours
+    };
+  }
+
+  // 💾 JSON 파일로 검사 결과 다운로드
+  function downloadSessionJson(sessionId) {
+    const r = storage.get("session_" + sessionId);
+    if (!r) {
+      alert('❌ 검사 결과를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const sessionData = JSON.parse(r.value);
+    const jsonStr = JSON.stringify(sessionData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `검사결과_${sessionData.testType}_${sessionId}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('💾 JSON 다운로드:', sessionId);
+    alert('✅ 검사 결과가 JSON 파일로 다운로드되었습니다!');
+  }
+
+  // 📂 JSON 파일에서 검사 결과 불러오기
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const sessionData = JSON.parse(e.target.result);
+        console.log('📂 JSON 파일 로드:', sessionData.sessionId);
+        
+        // 세션 데이터 복원
+        if (sessionData.testType === "SCT") {
+          setSctResponses(sessionData.responses || {});
+          setSctSummaries(sessionData.summaries || {});
+        } else if (sessionData.testType === "DSI") {
+          setDsiResponses(sessionData.responses || {});
+          setDsiRec(sessionData.recommendation || "");
+        }
+        
+        setSessionId(sessionData.sessionId);
+        setUserInfo({ phone: sessionData.userPhone || "", password: "" });
+        setView(sessionData.testType === "SCT" ? "sctResult" : "dsiResult");
+        
+        alert(`✅ ${sessionData.testType} 검사 결과를 불러왔습니다!\n세션 ID: ${sessionData.sessionId}`);
+      } catch (error) {
+        console.error('❌ JSON 파싱 오류:', error);
+        alert('❌ 파일 형식이 올바르지 않습니다.');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function copyLink(linkId) {
   async function generateSctPdf(sessionData) {
     try {
       console.log('📄 SCT PDF 생성 시작...');
@@ -737,7 +858,10 @@ function PsychologicalTestSystem() {
   useEffect(() => {
     console.log('🔄 앱 초기화 - LocalStorage 데이터 로드 시작');
     
-    // ✅ 로그인 상태 복원 (최우선)
+    // 🕐 만료된 검사 결과 자동 삭제 (최우선)
+    checkAndCleanExpiredSessions();
+    
+    // ✅ 로그인 상태 복원
     const restored = restoreLoginState();
     if (restored) {
       console.log('✅ 로그인 상태 자동 복원 완료');
@@ -773,6 +897,13 @@ function PsychologicalTestSystem() {
     }
     
     console.log('✅ 데이터 로드 완료');
+    
+    // 🔄 1분마다 만료 체크 (백그라운드)
+    const intervalId = setInterval(() => {
+      checkAndCleanExpiredSessions();
+    }, 60000); // 1분
+    
+    return () => clearInterval(intervalId);
   }, []); // 한 번만 실행
 
   useEffect(() => {
@@ -1383,6 +1514,15 @@ function PsychologicalTestSystem() {
               <p className="text-sm text-gray-400">{counselorPhone}</p>
             </div>
             <div className="flex gap-2">
+              <label className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 cursor-pointer flex items-center gap-2">
+                📂 불러오기
+                <input 
+                  type="file" 
+                  accept=".json" 
+                  onChange={handleFileUpload} 
+                  className="hidden"
+                />
+              </label>
               <button onClick={() => { loadAllSubmitted(); setView("counselorResults"); }} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 relative">
                 📊 제출된 검사
                 {counselorSessions.length > 0 && (
@@ -1806,6 +1946,15 @@ function PsychologicalTestSystem() {
             <p className="text-xs text-gray-400 mt-1">LocalStorage 영구 저장 활성화</p>
           </div>
           <div className="flex gap-2">
+            <label className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 cursor-pointer flex items-center gap-2">
+              📂 불러오기
+              <input 
+                type="file" 
+                accept=".json" 
+                onChange={handleFileUpload} 
+                className="hidden"
+              />
+            </label>
             <button 
               onClick={() => {
                 console.log('=== 🔍 LocalStorage 데이터 확인 ===');
@@ -1894,40 +2043,141 @@ function PsychologicalTestSystem() {
 }
 
 function SessionList({ sessions, onView }) {
+  const [currentTime, setCurrentTime] = React.useState(Date.now());
+  
+  // 1초마다 시간 업데이트 (카운트다운)
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
   if (sessions.length === 0) return (
     <div className="text-center py-12 text-gray-400">
       <div className="text-5xl mb-3">📋</div>
       <p>제출된 검사가 없습니다</p>
     </div>
   );
+  
+  // 만료 시간 계산 함수
+  const getTimeRemaining = (createdAt) => {
+    const now = currentTime;
+    const createdTime = new Date(createdAt).getTime();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const elapsed = now - createdTime;
+    const remaining = TWENTY_FOUR_HOURS - elapsed;
+    
+    if (remaining <= 0) {
+      return { expired: true, text: "만료됨", color: "text-red-600" };
+    }
+    
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+    
+    let color = "text-green-600";
+    if (hours < 3) color = "text-red-600";
+    else if (hours < 6) color = "text-orange-600";
+    
+    return {
+      expired: false,
+      text: `${hours}시간 ${minutes}분 ${seconds}초`,
+      color: color,
+      hours: hours
+    };
+  };
+  
+  // JSON 다운로드 함수
+  const downloadJson = (sessionId, e) => {
+    e.stopPropagation();
+    const r = localStorage.getItem("session_" + sessionId);
+    if (!r) {
+      alert('❌ 검사 결과를 찾을 수 없습니다.');
+      return;
+    }
+    
+    const sessionData = JSON.parse(r);
+    const jsonStr = JSON.stringify(sessionData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `검사결과_${sessionData.testType}_${sessionId}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    alert('✅ 검사 결과가 JSON 파일로 다운로드되었습니다!');
+  };
+  
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-gray-100">
-            {["#", "검사 유형", "전화번호", "제출 시간", "결과"].map(h => <th key={h} className="border p-2 text-left">{h}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((s, i) => (
-            <tr key={s.sessionId} className="hover:bg-gray-50">
-              <td className="border p-2 text-center text-gray-400">{i + 1}</td>
-              <td className="border p-2">
-                <span className={`px-2 py-0.5 rounded text-xs font-bold ${s.testType === "SCT" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
-                  {s.testType === "SCT" ? "📝 문장완성" : "🔍 자아분화"}
-                </span>
-              </td>
-              <td className="border p-2">{s.userPhone}</td>
-              <td className="border p-2">{new Date(s.createdAt).toLocaleString("ko-KR")}</td>
-              <td className="border p-2">
-                <button onClick={() => onView(s.sessionId)} className="bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold hover:bg-blue-700">
-                  결과 보기
-                </button>
-              </td>
+    <div className="space-y-4">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-sm text-yellow-800 font-semibold">⚠️ 검사 결과는 24시간 후 자동 삭제됩니다</p>
+        <p className="text-xs text-yellow-700 mt-1">중요한 결과는 <strong>💾 JSON 저장</strong> 버튼으로 로컬에 저장해주세요!</p>
+      </div>
+      
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              {["#", "검사 유형", "전화번호", "제출 시간", "⏱️ 남은 시간", "액션"].map(h => <th key={h} className="border p-2 text-left">{h}</th>)}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sessions.map((s, i) => {
+              const timeInfo = getTimeRemaining(s.createdAt);
+              return (
+                <tr key={s.sessionId} className={`hover:bg-gray-50 ${timeInfo.expired ? 'opacity-50 bg-red-50' : ''}`}>
+                  <td className="border p-2 text-center text-gray-400">{i + 1}</td>
+                  <td className="border p-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${s.testType === "SCT" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                      {s.testType === "SCT" ? "📝 문장완성" : "🔍 자아분화"}
+                    </span>
+                  </td>
+                  <td className="border p-2">{s.userPhone}</td>
+                  <td className="border p-2 text-xs text-gray-600">{new Date(s.createdAt).toLocaleString("ko-KR")}</td>
+                  <td className="border p-2">
+                    <span className={`font-bold text-xs ${timeInfo.color}`}>
+                      {timeInfo.expired ? '🔴 만료됨' : `⏱️ ${timeInfo.text}`}
+                    </span>
+                    {!timeInfo.expired && timeInfo.hours < 6 && (
+                      <div className="text-xs text-red-600 mt-1 font-semibold">
+                        ⚠️ 곧 삭제됩니다!
+                      </div>
+                    )}
+                  </td>
+                  <td className="border p-2">
+                    <div className="flex gap-1">
+                      {!timeInfo.expired ? (
+                        <>
+                          <button 
+                            onClick={() => onView(s.sessionId)} 
+                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-blue-700 flex-1"
+                          >
+                            📊 결과 보기
+                          </button>
+                          <button 
+                            onClick={(e) => downloadJson(s.sessionId, e)} 
+                            className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-green-700 flex-1"
+                            title="로컬에 JSON 파일로 저장"
+                          >
+                            💾 저장
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-red-600 font-semibold px-2 py-1">삭제됨</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
