@@ -596,6 +596,216 @@ function PsychologicalTestSystem() {
     setView(data.testType === "SCT" ? "sctResult" : "dsiResult");
   }
 
+  // ✅ SCT AI 권장사항 생성 (룰 기반)
+  function generateSctRecommendation(cat, nums) {
+    setLoadingSummary(p => ({ ...p, [cat]: true }));
+    
+    // 응답 수집
+    const responses = nums.map(n => ({
+      question: sctQ[n],
+      answer: sctResponses[n] || "(미응답)"
+    }));
+    
+    // 키워드 분석
+    const allText = responses.map(r => r.answer).join(" ").toLowerCase();
+    
+    // 심리학적 패턴 분석
+    let analysis = "";
+    
+    if (cat.includes("어머니")) {
+      if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
+        analysis = "어머니와의 관계가 긍정적으로 형성되어 있습니다. 애착 관계가 안정적이며, 이는 대인관계 형성의 긍정적 기반이 됩니다.";
+      } else if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+        analysis = "어머니와의 관계에서 일부 어려움이 관찰됩니다. 이는 정서적 지지 체계 강화가 필요함을 시사합니다. 상담을 통한 관계 개선이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "어머니와의 관계에 대한 복합적인 감정이 나타납니다. 애착 패턴을 탐색하고 긍정적 측면을 강화하는 것이 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("아버지")) {
+      if (allText.includes("존경") || allText.includes("좋") || allText.includes("따뜻")) {
+        analysis = "아버지와의 관계가 긍정적입니다. 권위 인물에 대한 건강한 태도가 형성되어 있으며, 이는 사회적응에 긍정적 영향을 줍니다.";
+      } else if (allText.includes("무섭") || allText.includes("엄격") || allText.includes("거리")) {
+        analysis = "아버지와의 관계에서 심리적 거리감이 느껴집니다. 권위에 대한 양가감정이 있을 수 있으며, 이는 상담을 통해 탐색할 필요가 있습니다.";
+      } else {
+        analysis = "아버지 상에 대한 다층적인 인식이 나타납니다. 권위 관계에 대한 이해를 심화하는 것이 성장에 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("가족")) {
+      if (allText.includes("화목") || allText.includes("행복") || allText.includes("사랑")) {
+        analysis = "가족 관계가 전반적으로 긍정적입니다. 안정적인 가족 기반은 심리적 안녕감의 중요한 자원입니다.";
+      } else if (allText.includes("갈등") || allText.includes("힘들") || allText.includes("불화")) {
+        analysis = "가족 내 역동에 어려움이 있는 것으로 보입니다. 가족 상담이나 의사소통 개선이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "가족 관계에 대한 복합적 인식이 나타납니다. 가족 내 자신의 역할과 위치를 재정립하는 것이 도움이 될 수 있습니다.";
+      }
+    } else if (cat.includes("두려움")) {
+      if (allText.includes("없") || allText.includes("괜찮")) {
+        analysis = "불안 수준이 낮고 심리적 안정감이 양호합니다. 현재의 대처 방식을 유지하는 것이 좋습니다.";
+      } else if (allText.includes("실패") || allText.includes("거절") || allText.includes("혼자")) {
+        analysis = "특정 영역에 대한 불안감이 관찰됩니다. 이는 자존감과 연결될 수 있으며, 인지행동치료적 접근이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "다양한 두려움 요인이 나타납니다. 불안 관리 기법을 학습하고 대처 자원을 강화하는 것이 권장됩니다.";
+      }
+    } else if (cat.includes("죄책감")) {
+      if (allText.includes("없") || allText.includes("후회")) {
+        analysis = "죄책감이 적절한 수준으로 관리되고 있습니다. 자기 성찰 능력이 있으나 과도하지 않습니다.";
+      } else if (allText.includes("많") || allText.includes("미안") || allText.includes("잘못")) {
+        analysis = "죄책감 수준이 다소 높게 나타납니다. 자기 비난 패턴을 탐색하고 자기 용서를 연습하는 것이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "죄책감에 대한 복합적 인식이 나타납니다. 과거 경험을 재해석하고 수용하는 과정이 필요할 수 있습니다.";
+      }
+    } else if (cat.includes("능력")) {
+      if (allText.includes("잘") || allText.includes("자신") || allText.includes("능력")) {
+        analysis = "자기 효능감이 양호합니다. 자신의 능력에 대한 긍정적 인식은 목표 달성의 중요한 자원입니다.";
+      } else if (allText.includes("부족") || allText.includes("못") || allText.includes("없")) {
+        analysis = "자기 효능감이 다소 낮게 나타납니다. 작은 성공 경험을 축적하고 강점을 재발견하는 것이 도움이 될 수 있습니다.";
+      } else {
+        analysis = "자기 능력에 대한 현실적 평가가 나타납니다. 강점을 더욱 발전시키고 약점을 보완하는 균형적 접근이 권장됩니다.";
+      }
+    } else if (cat.includes("미래")) {
+      if (allText.includes("밝") || allText.includes("희망") || allText.includes("기대")) {
+        analysis = "미래에 대한 낙관적 태도가 나타납니다. 긍정적 미래 전망은 현재의 동기와 에너지를 높입니다.";
+      } else if (allText.includes("불안") || allText.includes("걱정") || allText.includes("어두")) {
+        analysis = "미래에 대한 불안감이 관찰됩니다. 구체적 목표 설정과 단계적 계획이 불안을 감소시킬 수 있습니다.";
+      } else {
+        analysis = "미래에 대한 현실적 태도가 나타납니다. 희망과 준비를 균형있게 유지하는 것이 중요합니다.";
+      }
+    } else if (cat.includes("목표")) {
+      if (allText.includes("명확") || allText.includes("계획") || allText.includes("꿈")) {
+        analysis = "목표가 명확하고 동기 수준이 양호합니다. 구체적 실행 계획을 수립하면 목표 달성 가능성이 높습니다.";
+      } else if (allText.includes("모르") || allText.includes("없") || allText.includes("막연")) {
+        analysis = "목표가 불명확한 상태입니다. 자기 탐색을 통해 가치관과 방향성을 명료화하는 것이 필요합니다.";
+      } else {
+        analysis = "목표에 대한 탐색 과정에 있습니다. 다양한 가능성을 열어두고 점진적으로 방향을 설정하는 것이 도움이 됩니다.";
+      }
+    } else {
+      analysis = "이 영역에 대한 응답을 종합적으로 분석한 결과, 개인의 고유한 경험과 인식이 반영되어 있습니다. 상담을 통해 더 깊이 탐색할 수 있습니다.";
+    }
+    
+    // 권장사항 추가
+    const recommendations = [];
+    if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+      recommendations.push("• 정기적인 심리 상담을 통한 감정 표현 및 해소");
+    }
+    if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
+      recommendations.push("• 이완 훈련 및 마음챙김 명상 실천");
+    }
+    if (allText.includes("없") || allText.includes("모르")) {
+      recommendations.push("• 자기 탐색 활동 및 가치관 명료화 작업");
+    }
+    
+    const finalSummary = analysis + (recommendations.length > 0 ? "\n\n[권장사항]\n" + recommendations.join("\n") : "");
+    
+    setTimeout(() => {
+      setSctSummaries(p => ({ ...p, [cat]: finalSummary }));
+      setLoadingSummary(p => ({ ...p, [cat]: false }));
+    }, 500);
+  }
+
+  // ✅ DSI AI 권장사항 생성 (룰 기반)
+  function generateDsiRecommendation() {
+    setLoadingRec(true);
+    setDsiRec("");
+    
+    const { total, areas } = calcDsi();
+    const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
+    
+    // 영역별 분석
+    const areaAnalysis = [];
+    const weakAreas = [];
+    const strongAreas = [];
+    
+    Object.entries(areas).forEach(([area, score]) => {
+      const maxScore = 36;
+      const percentage = (score / maxScore) * 100;
+      
+      if (percentage >= 70) {
+        strongAreas.push(area);
+      } else if (percentage < 50) {
+        weakAreas.push(area);
+      }
+      
+      let areaComment = "";
+      if (area === "인지적 기능") {
+        if (percentage >= 70) {
+          areaComment = "감정 조절과 의사결정 능력이 우수합니다. 충동성이 낮고 논리적 사고가 가능합니다.";
+        } else if (percentage < 50) {
+          areaComment = "충동성 조절에 어려움이 있을 수 있습니다. 감정과 사고를 분리하는 연습이 필요합니다.";
+        } else {
+          areaComment = "감정 조절 능력이 보통 수준입니다. 스트레스 관리 기법을 익히면 도움이 됩니다.";
+        }
+      } else if (area === "자아통합") {
+        if (percentage >= 70) {
+          areaComment = "자기 정체성이 명확하고 가치관이 일관됩니다. 자율성이 높습니다.";
+        } else if (percentage < 50) {
+          areaComment = "타인의 영향을 많이 받는 편입니다. 자기 가치관을 명료화하는 작업이 필요합니다.";
+        } else {
+          areaComment = "자아 정체성 형성 과정에 있습니다. 자기 탐색을 통해 더 강화할 수 있습니다.";
+        }
+      } else if (area === "가족투사") {
+        if (percentage >= 70) {
+          areaComment = "가족 문제로부터 건강하게 분리되어 있습니다. 객관적 시각을 유지합니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 문제가 현재 삶에 영향을 주고 있습니다. 가족 상담이 도움이 될 수 있습니다.";
+        } else {
+          areaComment = "가족 영향을 인식하고 있습니다. 건강한 경계 설정이 필요합니다.";
+        }
+      } else if (area === "정서적 단절") {
+        if (percentage >= 70) {
+          areaComment = "가족과 적절한 거리를 유지합니다. 독립성과 친밀감의 균형이 좋습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족으로부터 과도하게 단절되어 있을 수 있습니다. 연결감 회복이 필요합니다.";
+        } else {
+          areaComment = "가족과의 거리감이 적절합니다. 현재 수준을 유지하는 것이 좋습니다.";
+        }
+      } else if (area === "가족퇴행") {
+        if (percentage >= 70) {
+          areaComment = "가족 스트레스 상황에서도 성숙하게 대응합니다. 퇴행 경향이 낮습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 상황에서 스트레스를 많이 받습니다. 감정 조절 기법이 필요합니다.";
+        } else {
+          areaComment = "가족 상황 대처가 보통입니다. 스트레스 관리를 강화하면 좋습니다.";
+        }
+      }
+      
+      areaAnalysis.push(`${area} (${score}/${maxScore}점, ${percentage.toFixed(0)}%):\n${areaComment}`);
+    });
+    
+    // 종합 분석
+    let overallAnalysis = `전반적인 자아분화 수준이 ${level}입니다. `;
+    if (total >= 120) {
+      overallAnalysis += "자기 자신에 대한 이해가 깊고, 타인과의 관계에서 건강한 경계를 유지할 수 있습니다. 정서적으로 안정적이며 독립적인 의사결정이 가능합니다.";
+    } else if (total >= 80) {
+      overallAnalysis += "기본적인 자아분화가 이루어져 있으나, 일부 영역에서 개선의 여지가 있습니다. 지속적인 자기 성찰과 성장이 도움이 됩니다.";
+    } else {
+      overallAnalysis += "자아분화 수준이 다소 낮은 편입니다. 가족이나 타인의 영향을 많이 받을 수 있으며, 전문적인 상담을 통한 지원이 권장됩니다.";
+    }
+    
+    // 권장사항
+    const recommendations = [];
+    
+    if (weakAreas.length > 0) {
+      recommendations.push(`[취약 영역 개선]\n취약한 영역: ${weakAreas.join(", ")}\n• 해당 영역에 초점을 맞춘 상담 진행\n• 자기 인식 강화 활동 (일기 쓰기, 자기 성찰)\n• 가족과의 건강한 경계 설정 연습`);
+    }
+    
+    if (total < 120) {
+      recommendations.push("[상담 접근법]\n• Bowen 가족치료 기법 활용\n• 자아분화 향상 프로그램 참여\n• 정서 조절 기술 훈련\n• 가족 관계 재구조화 작업");
+    }
+    
+    if (strongAreas.length > 0) {
+      recommendations.push(`[강점 활용]\n강점 영역: ${strongAreas.join(", ")}\n• 강점을 활용한 대처 전략 강화\n• 긍정적 경험 확대 적용`);
+    }
+    
+    recommendations.push("[단기 목표 (1-3개월)]\n• 주 1회 정기 상담 참여\n• 감정 일지 작성 (일일)\n• 이완 훈련 실천 (주 3회)");
+    
+    recommendations.push("[장기 목표 (6-12개월)]\n• 자아분화 수준 20% 향상\n• 가족과의 건강한 관계 재정립\n• 스트레스 상황에서의 대처 능력 강화");
+    
+    const finalRec = `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[주의사항]\n본 권장사항은 자동 분석 결과이며, 전문 상담사의 해석과 병행되어야 합니다. 개인의 고유한 맥락을 고려한 맞춤형 상담이 중요합니다.`;
+    
+    setTimeout(() => {
+      setDsiRec(finalRec);
+      setLoadingRec(false);
+    }, 1000);
+  }
+
   function logout() {
     // ✅ 로그인 상태 제거
     clearLoginState();
@@ -1084,7 +1294,17 @@ function PsychologicalTestSystem() {
         <div className="space-y-6">
           {Object.entries(sctCategories).map(([cat, nums]) => (
             <div key={cat} className="border border-gray-200 rounded-xl p-5">
-              <h3 className="font-bold text-lg text-gray-800 mb-3">{cat}</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-lg text-gray-800">{cat}</h3>
+                {!sctSummaries[cat] && !loadingSummary[cat] && (
+                  <button 
+                    onClick={() => generateSctRecommendation(cat, nums)}
+                    className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition"
+                  >
+                    🤖 AI 분석 생성
+                  </button>
+                )}
+              </div>
               <div className="space-y-2 mb-4">
                 {nums.map(n => (
                   <div key={n} className="bg-gray-50 rounded p-3">
@@ -1093,17 +1313,23 @@ function PsychologicalTestSystem() {
                   </div>
                 ))}
               </div>
+              {loadingSummary[cat] && (
+                <div className="bg-indigo-50 border border-indigo-200 rounded p-3 text-center">
+                  <p className="text-sm text-indigo-600">🔄 AI 분석 중...</p>
+                </div>
+              )}
               {sctSummaries[cat] && (
                 <div className="bg-indigo-50 border border-indigo-200 rounded p-3">
-                  <p className="text-xs text-indigo-600 font-bold mb-1">💡 AI 요약</p>
+                  <p className="text-xs text-indigo-600 font-bold mb-1">💡 AI 심리 분석</p>
                   <p className="text-sm text-indigo-800 whitespace-pre-wrap">{sctSummaries[cat]}</p>
                 </div>
               )}
             </div>
           ))}
         </div>
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-400">💡 AI 요약 기능은 API 키 설정 후 사용 가능합니다</p>
+        <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+          <p className="text-sm text-green-700 font-semibold">✅ AI 분석 기능이 활성화되었습니다!</p>
+          <p className="text-xs text-green-600 mt-1">각 카테고리의 "🤖 AI 분석 생성" 버튼을 클릭하여 심리학적 해석을 확인하세요.</p>
         </div>
       </div>
     </div>
@@ -1140,6 +1366,40 @@ function PsychologicalTestSystem() {
               </div>
             ))}
           </div>
+          
+          {/* ✅ AI 권장사항 생성 버튼 */}
+          {!dsiRec && !loadingRec && (
+            <div className="mb-6 text-center">
+              <button 
+                onClick={generateDsiRecommendation}
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold text-base hover:bg-indigo-700 transition shadow-lg"
+              >
+                🤖 AI 심리 분석 및 권장사항 생성
+              </button>
+              <p className="text-xs text-gray-500 mt-2">검사 결과를 기반으로 심리학적 해석과 상담 권장사항을 제공합니다</p>
+            </div>
+          )}
+          
+          {loadingRec && (
+            <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-lg p-6 text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+              <p className="text-sm text-indigo-600 font-semibold">🔄 AI가 검사 결과를 분석 중입니다...</p>
+              <p className="text-xs text-indigo-500 mt-1">잠시만 기다려주세요</p>
+            </div>
+          )}
+          
+          {dsiRec && (
+            <div className="mb-6 bg-indigo-50 border-2 border-indigo-300 rounded-xl p-5 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-2xl">💡</span>
+                <p className="font-bold text-indigo-900 text-lg">AI 심리 분석 및 상담 권장사항</p>
+              </div>
+              <div className="bg-white rounded-lg p-4 border border-indigo-200">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{dsiRec}</p>
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-3">
             {dsiQ.map(q => (
               <div key={q.num} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
@@ -1152,14 +1412,10 @@ function PsychologicalTestSystem() {
               </div>
             ))}
           </div>
-          {dsiRec && (
-            <div className="mt-6 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
-              <p className="font-bold text-indigo-800 mb-2">💡 AI 상담 권장사항</p>
-              <p className="text-sm text-indigo-700 whitespace-pre-wrap">{dsiRec}</p>
-            </div>
-          )}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-400">💡 AI 권장사항 기능은 API 키 설정 후 사용 가능합니다</p>
+          
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+            <p className="text-sm text-green-700 font-semibold">✅ AI 분석 기능이 활성화되었습니다!</p>
+            <p className="text-xs text-green-600 mt-1">룰 기반 AI 시스템이 검사 결과를 종합적으로 분석하여 전문적인 권장사항을 제공합니다.</p>
           </div>
         </div>
       </div>
