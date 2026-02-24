@@ -2474,18 +2474,18 @@ function SessionList({ sessions, onView }) {
                     )}
                   </td>
                   <td className="border p-2">
-                    <div className="flex gap-1">
+                    <div className="flex flex-col gap-1">
                       {!timeInfo.expired ? (
                         <>
                           <button 
                             onClick={() => onView(s.sessionId)} 
-                            className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-blue-700 flex-1"
+                            className="bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700 w-full"
                           >
                             📊 결과 보기
                           </button>
                           <button 
                             onClick={(e) => downloadJson(s.sessionId, e)} 
-                            className="bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold hover:bg-green-700 flex-1"
+                            className="bg-green-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-green-700 w-full"
                             title="로컬에 JSON 파일로 저장"
                           >
                             💾 저장
