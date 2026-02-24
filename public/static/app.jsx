@@ -409,15 +409,15 @@ function PsychologicalTestSystem() {
       const margin = 20;
       let yPos = margin;
 
-      // 헤더
+      // 헤더 (영문만 사용)
       doc.setFontSize(20);
       doc.setFont(undefined, 'bold');
-      doc.text('문장완성검사 (SCT) 결과 리포트', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('SCT Test Result Report', pageWidth / 2, yPos, { align: 'center' });
       
       yPos += 15;
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text('Sentence Completion Test Report', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('Sentence Completion Test', pageWidth / 2, yPos, { align: 'center' });
       
       yPos += 15;
       doc.setDrawColor(0);
@@ -435,16 +435,32 @@ function PsychologicalTestSystem() {
       doc.setFontSize(10);
       doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
       yPos += 6;
-      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('ko-KR')}`, margin + 5, yPos);
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleDateString('en-US')}`, margin + 5, yPos);
       yPos += 6;
-      doc.text(`User Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      doc.text(`Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
       yPos += 10;
 
-      // 카테고리별 응답 및 AI 분석
+      // 카테고리별 응답 (AI 분석은 제외 - 한글 문제)
       doc.setFontSize(11);
       doc.setFont(undefined, 'bold');
-      doc.text('[ 2. Category Analysis ]', margin, yPos);
+      doc.text('[ 2. Responses by Category ]', margin, yPos);
       yPos += 8;
+
+      // 카테고리 이름 영문 매핑
+      const categoryMap = {
+        "어머니에 대한 태도": "Attitude toward Mother",
+        "아버지에 대한 태도": "Attitude toward Father",
+        "가족 관계": "Family Relationships",
+        "이성 관계": "Romantic Relationships",
+        "친구 관계": "Friendships",
+        "권위자에 대한 태도": "Attitude toward Authority",
+        "두려움": "Fears",
+        "죄책감": "Guilt",
+        "능력에 대한 인식": "Perception of Abilities",
+        "과거": "Past",
+        "미래": "Future",
+        "목표": "Goals"
+      };
 
       for (const cat of sctCategories) {
         // 페이지 넘김 체크
@@ -453,9 +469,11 @@ function PsychologicalTestSystem() {
           yPos = margin;
         }
 
+        const englishCatName = categoryMap[cat.name] || cat.name;
+        
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text(`${cat.emoji} ${cat.name}`, margin + 5, yPos);
+        doc.text(`${cat.emoji} ${englishCatName}`, margin + 5, yPos);
         yPos += 7;
 
         const catQs = sctQ.filter(q => q.cat === cat.name);
@@ -465,47 +483,24 @@ function PsychologicalTestSystem() {
         for (const q of catQs) {
           const answer = sessionData.responses[q.num] || '(No answer)';
           
-          // 질문
+          // 질문 (한글 제목 제외, 번호만)
           if (yPos > pageHeight - 30) {
             doc.addPage();
             yPos = margin;
           }
           
-          const questionText = `Q${q.num}. ${q.txt}`;
-          const questionLines = doc.splitTextToSize(questionText, pageWidth - margin * 2 - 10);
-          doc.text(questionLines, margin + 10, yPos);
-          yPos += questionLines.length * 5;
+          doc.text(`Q${q.num}:`, margin + 10, yPos);
+          yPos += 5;
           
-          // 답변
-          const answerText = `A: ${answer}`;
-          const answerLines = doc.splitTextToSize(answerText, pageWidth - margin * 2 - 10);
+          // 답변 (영문/숫자만 표시)
+          const answerText = `Answer: ${answer}`;
           doc.setTextColor(0, 102, 204);
-          doc.text(answerLines, margin + 10, yPos);
+          doc.text(answerText, margin + 10, yPos);
           doc.setTextColor(0, 0, 0);
-          yPos += answerLines.length * 5 + 3;
+          yPos += 7;
         }
 
-        // AI 분석 추가
-        if (sessionData.summaries && sessionData.summaries[cat.name]) {
-          if (yPos > pageHeight - 30) {
-            doc.addPage();
-            yPos = margin;
-          }
-
-          doc.setFont(undefined, 'bold');
-          doc.setFontSize(9);
-          doc.text('AI Analysis:', margin + 10, yPos);
-          yPos += 6;
-
-          doc.setFont(undefined, 'normal');
-          doc.setFontSize(8);
-          const summaryLines = doc.splitTextToSize(sessionData.summaries[cat.name], pageWidth - margin * 2 - 15);
-          doc.setFillColor(240, 240, 240);
-          doc.rect(margin + 10, yPos - 4, pageWidth - margin * 2 - 10, summaryLines.length * 4 + 4, 'F');
-          doc.text(summaryLines, margin + 12, yPos);
-          yPos += summaryLines.length * 4 + 8;
-        }
-
+        // AI 분석은 한글 문제로 제외
         yPos += 5;
       }
 
@@ -516,7 +511,7 @@ function PsychologicalTestSystem() {
         doc.setFontSize(8);
         doc.setTextColor(128, 128, 128);
         doc.text(
-          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('ko-KR')}`,
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('en-US')}`,
           pageWidth / 2,
           pageHeight - 10,
           { align: 'center' }
@@ -527,10 +522,10 @@ function PsychologicalTestSystem() {
       const fileName = `SCT_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
       doc.save(fileName);
       console.log('✅ SCT PDF 생성 완료:', fileName);
-      alert('✅ SCT 검사 결과 PDF가 다운로드되었습니다!');
+      alert('✅ SCT PDF downloaded successfully!');
     } catch (error) {
       console.error('❌ PDF 생성 실패:', error);
-      alert('❌ PDF 생성 중 오류가 발생했습니다: ' + error.message);
+      alert('❌ PDF generation failed: ' + error.message);
     }
   }
 
@@ -564,15 +559,15 @@ function PsychologicalTestSystem() {
         }
       });
 
-      // 헤더
+      // 헤더 (영문만 사용)
       doc.setFontSize(20);
       doc.setFont(undefined, 'bold');
-      doc.text('가족관계검사 (DSI) 결과 리포트', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('DSI Test Result Report', pageWidth / 2, yPos, { align: 'center' });
       
       yPos += 15;
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-      doc.text('Differentiation of Self Inventory Report', pageWidth / 2, yPos, { align: 'center' });
+      doc.text('Differentiation of Self Inventory', pageWidth / 2, yPos, { align: 'center' });
       
       yPos += 15;
       doc.setDrawColor(0);
@@ -590,9 +585,9 @@ function PsychologicalTestSystem() {
       doc.setFontSize(10);
       doc.text(`Session ID: ${sessionData.sessionId}`, margin + 5, yPos);
       yPos += 6;
-      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('ko-KR')}`, margin + 5, yPos);
+      doc.text(`Test Date: ${new Date(sessionData.createdAt).toLocaleString('en-US')}`, margin + 5, yPos);
       yPos += 6;
-      doc.text(`User Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
+      doc.text(`Phone: ${sessionData.userPhone || 'N/A'}`, margin + 5, yPos);
       yPos += 12;
 
       // 종합 점수
@@ -602,8 +597,7 @@ function PsychologicalTestSystem() {
       yPos += 8;
 
       const level = total >= 109 ? 'High' : total >= 73 ? 'Medium' : 'Low';
-      const levelKr = total >= 109 ? '높음' : total >= 73 ? '중간' : '낮음';
-      const levelColor = total >= 109 ? [255, 87, 87] : total >= 73 ? [255, 193, 7] : [76, 175, 80];
+      const levelColor = total >= 109 ? [76, 175, 80] : total >= 73 ? [255, 193, 7] : [255, 87, 87];
 
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
@@ -612,7 +606,7 @@ function PsychologicalTestSystem() {
       
       doc.setFont(undefined, 'bold');
       doc.setTextColor(...levelColor);
-      doc.text(`Level: ${levelKr} (${level})`, margin + 5, yPos);
+      doc.text(`Level: ${level}`, margin + 5, yPos);
       doc.setTextColor(0, 0, 0);
       yPos += 12;
 
@@ -625,6 +619,15 @@ function PsychologicalTestSystem() {
       doc.setFontSize(9);
       doc.setFont(undefined, 'normal');
 
+      // 영역 이름을 영문으로 매핑
+      const areaNameMap = {
+        "가족불화": "Family Conflict",
+        "부모관계": "Parent Relationship", 
+        "형제관계": "Sibling Relationship",
+        "가족퇴행": "Family Regression",
+        "투사": "Projection"
+      };
+
       const areaNames = Object.keys(areas);
       for (const areaName of areaNames) {
         if (yPos > pageHeight - 30) {
@@ -636,8 +639,9 @@ function PsychologicalTestSystem() {
         const areaQs = dsiQ.filter(q => q.area === areaName);
         const maxScore = areaQs.length * 5;
         const avgScore = (score / areaQs.length).toFixed(1);
+        const englishName = areaNameMap[areaName] || areaName;
 
-        doc.text(`${areaName}: ${score} / ${maxScore} (Avg: ${avgScore})`, margin + 5, yPos);
+        doc.text(`${englishName}: ${score}/${maxScore} (Avg: ${avgScore})`, margin + 5, yPos);
         
         // 진행 바
         const barWidth = 100;
@@ -676,34 +680,20 @@ function PsychologicalTestSystem() {
 
         const answer = tempDsiResponses[q.num] || 'N/A';
         const scoreText = q.rev ? `(Reversed, Score: ${6 - parseInt(answer)})` : `(Score: ${answer})`;
+        const englishArea = areaNameMap[q.area] || q.area;
         
-        const questionText = `Q${q.num}. ${q.txt}`;
-        const questionLines = doc.splitTextToSize(questionText, pageWidth - margin * 2 - 10);
-        doc.text(questionLines, margin + 5, yPos);
-        yPos += questionLines.length * 4;
+        const questionText = `Q${q.num}. [${englishArea}]`;
+        doc.text(questionText, margin + 5, yPos);
+        yPos += 4;
         
         doc.setTextColor(0, 102, 204);
-        doc.text(`Answer: ${answer} ${scoreText} | Area: ${q.area}`, margin + 5, yPos);
+        doc.text(`Answer: ${answer} ${scoreText}`, margin + 5, yPos);
         doc.setTextColor(0, 0, 0);
         yPos += 6;
       }
 
-      // AI 권장사항 (있는 경우)
-      if (sessionData.recommendation) {
-        doc.addPage();
-        yPos = margin;
-
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text('[ 5. AI Recommendations ]', margin, yPos);
-        yPos += 8;
-
-        doc.setFontSize(9);
-        doc.setFont(undefined, 'normal');
-
-        const recLines = doc.splitTextToSize(sessionData.recommendation, pageWidth - margin * 2 - 5);
-        doc.text(recLines, margin + 5, yPos);
-      }
+      // AI 권장사항은 한글 지원 문제로 PDF에서 제외
+      // 웹 화면에서 확인 가능
 
       // 푸터
       const totalPages = doc.internal.pages.length - 1;
@@ -712,7 +702,7 @@ function PsychologicalTestSystem() {
         doc.setFontSize(8);
         doc.setTextColor(128, 128, 128);
         doc.text(
-          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('ko-KR')}`,
+          `Page ${i} of ${totalPages} | Generated: ${new Date().toLocaleDateString('en-US')}`,
           pageWidth / 2,
           pageHeight - 10,
           { align: 'center' }
@@ -723,10 +713,10 @@ function PsychologicalTestSystem() {
       const fileName = `DSI_Report_${sessionData.sessionId}_${new Date().getTime()}.pdf`;
       doc.save(fileName);
       console.log('✅ DSI PDF 생성 완료:', fileName);
-      alert('✅ DSI 검사 결과 PDF가 다운로드되었습니다!');
+      alert('✅ DSI PDF downloaded successfully!');
     } catch (error) {
       console.error('❌ PDF 생성 실패:', error);
-      alert('❌ PDF 생성 중 오류가 발생했습니다: ' + error.message);
+      alert('❌ PDF generation failed: ' + error.message);
     }
   }
 
