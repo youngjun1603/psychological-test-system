@@ -43,7 +43,7 @@ function PsychologicalTestSystem() {
   const [counselorForm, setCounselorForm] = useState({
     name: "", phone: "", password: "", certification: "", education: "", experience: ""
   });
-  const [linkForm, setLinkForm] = useState({ clientName: "", clientPhone: "", testType: "SCT" });
+  const [linkForm, setLinkForm] = useState({ clientName: "", clientPhone: "", testType: "SCT", counselingType: "psychological" });
   const [generatedLinks, setGeneratedLinks] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
   const [showLinkId, setShowLinkId] = useState(null);
@@ -766,14 +766,15 @@ function PsychologicalTestSystem() {
       clientName: linkForm.clientName,
       clientPhone: linkForm.clientPhone,
       testType: linkForm.testType,
+      counselingType: linkForm.counselingType, // 상담 유형 추가
       createdAt: new Date().toISOString(),
       status: "pending"
     };
     storeLink(data);
-    console.log('🔗 링크 생성:', linkId, '| 내담자:', data.clientName, '| 검사:', data.testType);
+    console.log('🔗 링크 생성:', linkId, '| 내담자:', data.clientName, '| 검사:', data.testType, '| 상담 유형:', data.counselingType);
     
     setGeneratedLinks(prev => [data, ...prev]);
-    setLinkForm({ clientName: "", clientPhone: "", testType: "SCT" });
+    setLinkForm({ clientName: "", clientPhone: "", testType: "SCT", counselingType: "psychological" });
     setFormMsg({ type: "success", text: "링크가 생성되었습니다! 📋 링크 ID 복사 버튼으로 내담자에게 전달하세요." });
     setTimeout(() => setFormMsg({ type: "", text: "" }), 4000);
   }
@@ -1100,9 +1101,12 @@ function PsychologicalTestSystem() {
     return data;
   }
 
-  // ✅ SCT AI 권장사항 생성 (룰 기반)
+  // ✅ SCT AI 권장사항 생성 (룰 기반 - 상담 유형별)
   function generateSctRecommendation(cat, nums) {
     setLoadingSummary(p => ({ ...p, [cat]: true }));
+    
+    // 상담 유형 확인 (기본값: 심리상담)
+    const counselingType = activeLinkData?.counselingType || "psychological";
     
     // 응답 수집
     const responses = nums.map(n => ({
@@ -1113,8 +1117,30 @@ function PsychologicalTestSystem() {
     // 키워드 분석
     const allText = responses.map(r => r.answer).join(" ").toLowerCase();
     
-    // 심리학적 패턴 분석
+    // 상담 유형에 따라 분석 분기
     let analysis = "";
+    let recommendations = [];
+    
+    if (counselingType === "biblical") {
+      // 🕊️ 성경적 상담 분석
+      analysis = generateBiblicalSctAnalysis(cat, allText);
+      recommendations = generateBiblicalSctRecommendations(cat, allText);
+    } else {
+      // 🧠 심리상담 분석 (기존 로직)
+      analysis = generatePsychologicalSctAnalysis(cat, allText);
+      recommendations = generatePsychologicalSctRecommendations(allText);
+    }
+    
+    const finalSummary = analysis + (recommendations.length > 0 ? "\n\n[권장사항]\n" + recommendations.join("\n") : "");
+    
+    setTimeout(() => {
+      setSctSummaries(p => ({ ...p, [cat]: finalSummary }));
+      setLoadingSummary(p => ({ ...p, [cat]: false }));
+    }, 800);
+  }
+
+  // 🧠 심리상담 SCT 분석
+  function generatePsychologicalSctAnalysis(cat, allText) {
     
     if (cat.includes("어머니")) {
       if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
@@ -1580,6 +1606,21 @@ function PsychologicalTestSystem() {
                   {l}
                 </button>
               ))}
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-600 mb-2">상담 유형</label>
+              <div className="flex gap-3">
+                {[["psychological", "🧠 심리상담"], ["biblical", "🕊️ 성경적 상담"]].map(([v, l]) => (
+                  <button key={v} onClick={() => setLinkForm({ ...linkForm, counselingType: v })} className={`flex-1 py-3 rounded-xl font-semibold border-2 transition ${linkForm.counselingType === v ? "border-blue-500 bg-blue-50 text-blue-800" : "border-gray-200 text-gray-500 hover:border-blue-300"}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {linkForm.counselingType === "biblical" 
+                  ? "성경적 상담: 성경 말씀과 기독교 신앙을 기반으로 한 해석과 권장사항을 제공합니다." 
+                  : "심리상담: 심리학 이론과 과학적 접근을 기반으로 한 해석과 권장사항을 제공합니다."}
+              </p>
             </div>
             <button onClick={generateLink} className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-purple-700 transition">
               ✨ 검사 링크 생성
