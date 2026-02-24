@@ -2143,7 +2143,8 @@ function PsychologicalTestSystem() {
         </div>
       </div>
     </div>
-  );
+    );
+  }
 
   if (view === "dsiResult") {
     const { total, areas } = calcDsi();
