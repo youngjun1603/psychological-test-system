@@ -1081,11 +1081,19 @@ function PsychologicalTestSystem() {
     if (!r) return null;
     const data = JSON.parse(r.value);
     
-    // PDF 생성을 위해 데이터 반환
+    // PDF 생성을 위해 데이터만 반환하는 경우
     if (typeof sid === 'string' && sid.length > 0) {
       // 뷰 전환 없이 데이터만 반환 (PDF 생성용)
       if (arguments.length === 1) {
         return data;
+      }
+    }
+    
+    // linkId가 있으면 링크 데이터 복원 (상담 유형 정보 포함)
+    if (data.linkId) {
+      const linkData = loadLink(data.linkId);
+      if (linkData) {
+        setActiveLinkData(linkData);
       }
     }
     
@@ -1095,8 +1103,10 @@ function PsychologicalTestSystem() {
       setSctSummaries(data.summaries || {});
     } else {
       setDsiResponses(data.responses || {});
+      setDsiRec(data.recommendation || "");
     }
     setSessionId(sid);
+    setUserInfo({ phone: data.userPhone || "", password: "" });
     setView(data.testType === "SCT" ? "sctResult" : "dsiResult");
     return data;
   }
