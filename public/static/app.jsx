@@ -1076,23 +1076,29 @@ function PsychologicalTestSystem() {
     setView("complete");
   }
 
-  function viewSession(sid) {
+  function viewSession(sid, returnDataOnly = false) {
+    console.log('🔍 viewSession 호출:', sid, 'returnDataOnly:', returnDataOnly);
+    
     const r = storage.get("session_" + sid);
-    if (!r) return null;
+    if (!r) {
+      console.log('❌ 세션을 찾을 수 없습니다:', sid);
+      return null;
+    }
+    
     const data = JSON.parse(r.value);
+    console.log('✅ 세션 데이터 로드:', data.testType, data.userPhone);
     
     // PDF 생성을 위해 데이터만 반환하는 경우
-    if (typeof sid === 'string' && sid.length > 0) {
-      // 뷰 전환 없이 데이터만 반환 (PDF 생성용)
-      if (arguments.length === 1) {
-        return data;
-      }
+    if (returnDataOnly) {
+      console.log('📄 PDF 생성용 데이터 반환');
+      return data;
     }
     
     // linkId가 있으면 링크 데이터 복원 (상담 유형 정보 포함)
     if (data.linkId) {
       const linkData = loadLink(data.linkId);
       if (linkData) {
+        console.log('🔗 링크 데이터 복원:', linkData.counselingType);
         setActiveLinkData(linkData);
       }
     }
@@ -1101,13 +1107,19 @@ function PsychologicalTestSystem() {
     if (data.testType === "SCT") {
       setSctResponses(data.responses || {});
       setSctSummaries(data.summaries || {});
+      console.log('📝 SCT 응답 설정 완료');
     } else {
       setDsiResponses(data.responses || {});
       setDsiRec(data.recommendation || "");
+      console.log('🔍 DSI 응답 설정 완료');
     }
+    
     setSessionId(sid);
     setUserInfo({ phone: data.userPhone || "", password: "" });
-    setView(data.testType === "SCT" ? "sctResult" : "dsiResult");
+    const targetView = data.testType === "SCT" ? "sctResult" : "dsiResult";
+    console.log('🎯 뷰 전환:', targetView);
+    setView(targetView);
+    
     return data;
   }
 
@@ -2092,7 +2104,7 @@ function PsychologicalTestSystem() {
           <div className="flex gap-2">
             <button 
               onClick={() => {
-                const sessionData = viewSession(sessionId);
+                const sessionData = viewSession(sessionId, true);
                 if (sessionData) {
                   generateSctPdf(sessionData);
                 }
@@ -2172,7 +2184,7 @@ function PsychologicalTestSystem() {
             <div className="flex gap-2">
               <button 
                 onClick={() => {
-                  const sessionData = viewSession(sessionId);
+                  const sessionData = viewSession(sessionId, true);
                   if (sessionData) {
                     generateDsiPdf(sessionData);
                   }
