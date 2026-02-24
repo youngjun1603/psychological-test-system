@@ -1141,6 +1141,7 @@ function PsychologicalTestSystem() {
 
   // 🧠 심리상담 SCT 분석
   function generatePsychologicalSctAnalysis(cat, allText) {
+    let analysis = "";
     
     if (cat.includes("어머니")) {
       if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
@@ -1210,32 +1211,174 @@ function PsychologicalTestSystem() {
       analysis = "이 영역에 대한 응답을 종합적으로 분석한 결과, 개인의 고유한 경험과 인식이 반영되어 있습니다. 상담을 통해 더 깊이 탐색할 수 있습니다.";
     }
     
-    // 권장사항 추가
+    return analysis;
+  }
+  
+  // 🧠 심리상담 SCT 권장사항
+  function generatePsychologicalSctRecommendations(allText) {
     const recommendations = [];
     if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
       recommendations.push("• 정기적인 심리 상담을 통한 감정 표현 및 해소");
+      recommendations.push("• 인지행동치료(CBT) 기법을 통한 사고 패턴 개선");
     }
     if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
       recommendations.push("• 이완 훈련 및 마음챙김 명상 실천");
+      recommendations.push("• 불안 관리 기법 학습 (복식호흡, 점진적 근육 이완)");
     }
     if (allText.includes("없") || allText.includes("모르")) {
       recommendations.push("• 자기 탐색 활동 및 가치관 명료화 작업");
+      recommendations.push("• 진로 상담 및 심리검사를 통한 자기 이해");
+    }
+    if (allText.includes("우울") || allText.includes("슬프") || allText.includes("의욕")) {
+      recommendations.push("• 우울감 관리를 위한 행동 활성화 전략");
+      recommendations.push("• 규칙적인 운동과 충분한 수면");
+    }
+    return recommendations;
+  }
+  
+  // 🕊️ 성경적 상담 SCT 분석
+  function generateBiblicalSctAnalysis(cat, allText) {
+    let analysis = "";
+    
+    if (cat.includes("어머니")) {
+      if (allText.includes("좋") || allText.includes("사랑") || allText.includes("따뜻")) {
+        analysis = "어머니와의 관계에서 하나님의 사랑과 돌보심이 반영되어 있습니다. '어머니가 자식을 위로함같이 내가 너희를 위로하리니'(이사야 66:13)라는 말씀처럼, 건강한 어머니상은 하나님의 사랑을 경험하는 통로가 됩니다.";
+      } else if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+        analysis = "어머니와의 관계에서 어려움이 있지만, 하나님께서는 '고아의 아버지'(시편 68:5)이시며 모든 관계의 상처를 치유하실 수 있습니다. 용서와 화해의 과정을 통해 하나님의 회복을 경험할 수 있습니다.";
+      } else {
+        analysis = "어머니와의 관계에 대한 복합적인 감정이 나타납니다. 이는 모든 인간 관계의 불완전함을 보여주며, 완전한 사랑은 오직 하나님 안에서만 발견됩니다(요한일서 4:19).";
+      }
+    } else if (cat.includes("아버지")) {
+      if (allText.includes("존경") || allText.includes("좋") || allText.includes("따뜻")) {
+        analysis = "아버지와의 긍정적 관계는 하늘 아버지를 이해하는 데 도움이 됩니다. '아버지께서 자식을 긍휼히 여기심같이 여호와께서는 자기를 경외하는 자를 긍휼히 여기시나니'(시편 103:13).";
+      } else if (allText.includes("무섭") || allText.includes("엄격") || allText.includes("거리")) {
+        analysis = "아버지와의 관계에서 두려움이나 거리감이 느껴지지만, 하나님 아버지는 '사랑의 아버지시오 모든 위로의 하나님이시며'(고린도후서 1:3) 우리를 완전히 받아주십니다. 땅의 아버지의 불완전함이 하늘 아버지의 완전한 사랑을 가리지 않도록 기도가 필요합니다.";
+      } else {
+        analysis = "아버지 상에 대한 다층적인 인식이 나타납니다. 하나님은 완전한 아버지이시며, 땅의 아버지와의 관계를 통해 하나님의 아버지 되심을 더 깊이 이해할 수 있습니다.";
+      }
+    } else if (cat.includes("가족")) {
+      if (allText.includes("화목") || allText.includes("행복") || allText.includes("사랑")) {
+        analysis = "가족 관계가 전반적으로 긍정적입니다. '보라 형제가 연합하여 동거함이 어찌 그리 선하고 아름다운고'(시편 133:1). 감사함으로 이 축복을 지키고 더욱 발전시켜 나가세요.";
+      } else if (allText.includes("갈등") || allText.includes("힘들") || allText.includes("불화")) {
+        analysis = "가족 내 어려움이 있지만, '그리스도의 평강이 너희 마음을 주장하게 하라'(골로새서 3:15). 용서와 화해는 성경적 가족 회복의 핵심입니다. 먼저 자신의 죄를 인정하고 용서를 구하는 것부터 시작하세요.";
+      } else {
+        analysis = "가족 관계에 대한 복합적 인식이 나타납니다. 가족은 하나님이 세우신 첫 번째 공동체이며, '서로 사랑하라'(요한복음 13:34)는 명령이 가장 먼저 실천되어야 할 곳입니다.";
+      }
+    } else if (cat.includes("두려움")) {
+      if (allText.includes("없") || allText.includes("괜찮")) {
+        analysis = "두려움이 적은 것은 하나님을 신뢰하는 믿음의 표현일 수 있습니다. '두려워하지 말라 내가 너와 함께함이라'(이사야 41:10)는 약속을 계속 붙들으세요.";
+      } else if (allText.includes("실패") || allText.includes("거절") || allText.includes("혼자")) {
+        analysis = "두려움이 관찰되지만, 성경은 '두려워 말라'를 365번 말씀합니다. 하나님은 '너를 버리지 아니하고 너를 떠나지 아니하시리라'(히브리서 13:5)고 약속하십니다. 두려움은 하나님께 맡기고 말씀 안에서 평안을 찾으세요.";
+      } else {
+        analysis = "다양한 두려움이 나타납니다. '완전한 사랑이 두려움을 내쫓나니'(요한일서 4:18). 하나님의 사랑을 더 깊이 경험할수록 두려움은 줄어듭니다.";
+      }
+    } else if (cat.includes("죄책감")) {
+      if (allText.includes("없") || allText.includes("후회")) {
+        analysis = "적절한 죄책감은 회개로 이끄는 건강한 양심의 표현입니다. '우리가 우리 죄를 자백하면 그는 미쁘시고 의로우사 우리 죄를 사하시며'(요한일서 1:9).";
+      } else if (allText.includes("많") || allText.includes("미안") || allText.includes("잘못")) {
+        analysis = "과도한 죄책감이 나타납니다. 그리스도 안에서 '정죄함이 없나니'(로마서 8:1). 이미 용서받았다면 계속 죄책감에 매여 있는 것은 사탄의 전략입니다. 하나님의 완전한 용서를 믿고 받아들이세요.";
+      } else {
+        analysis = "죄책감에 대한 복합적 인식이 나타납니다. 성경적으로 죄는 인정하되, 그리스도의 십자가를 통해 이미 용서받았음을 기억하세요(에베소서 1:7).";
+      }
+    } else if (cat.includes("능력")) {
+      if (allText.includes("잘") || allText.includes("자신") || allText.includes("능력")) {
+        analysis = "자신의 능력을 긍정적으로 인식하고 있습니다. 이는 하나님이 주신 은사를 잘 활용하는 것입니다. '내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라'(빌립보서 4:13).";
+      } else if (allText.includes("부족") || allText.includes("못") || allText.includes("없")) {
+        analysis = "자신의 부족함을 인식하는 것은 겸손의 시작입니다. '내 은혜가 네게 족하도다 이는 내 능력이 약한 데서 온전하여짐이라'(고린도후서 12:9). 하나님은 약한 자를 통해 일하십니다.";
+      } else {
+        analysis = "자기 능력에 대한 현실적 평가가 나타납니다. 성경은 '자기를 낮추는 자는 높아지고'(마태복음 23:12)라고 말씀합니다. 겸손과 자신감의 균형을 유지하세요.";
+      }
+    } else if (cat.includes("미래")) {
+      if (allText.includes("밝") || allText.includes("희망") || allText.includes("기대")) {
+        analysis = "미래에 대한 희망적 태도가 나타납니다. '너희를 향한 나의 생각을 아나니 평안이요 재앙이 아니니라 너희에게 미래와 희망을 주는 것이니라'(예레미야 29:11).";
+      } else if (allText.includes("불안") || allText.includes("걱정") || allText.includes("어두")) {
+        analysis = "미래에 대한 불안이 관찰됩니다. '내일 일을 위하여 염려하지 말라... 한 날의 괴로움은 그 날로 족하니라'(마태복음 6:34). 하나님이 인도하시는 미래를 신뢰하세요.";
+      } else {
+        analysis = "미래에 대한 현실적 태도가 나타납니다. '사람이 마음으로 자기의 길을 계획할지라도 그의 걸음을 인도하시는 이는 여호와시니라'(잠언 16:9).";
+      }
+    } else if (cat.includes("목표")) {
+      if (allText.includes("명확") || allText.includes("계획") || allText.includes("꿈")) {
+        analysis = "목표가 명확한 것은 좋은 청지기의 모습입니다. '네가 하는 일을 여호와께 맡기라 그리하면 네가 경영하는 것이 이루어지리라'(잠언 16:3). 하나님의 뜻 안에서 목표를 추구하세요.";
+      } else if (allText.includes("모르") || allText.includes("없") || allText.includes("막연")) {
+        analysis = "목표가 불명확한 상태입니다. '너희는 먼저 그의 나라와 그의 의를 구하라 그리하면 이 모든 것을 너희에게 더하시리라'(마태복음 6:33). 하나님의 뜻을 구하는 기도부터 시작하세요.";
+      } else {
+        analysis = "목표에 대한 탐색 과정에 있습니다. '너는 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라 너는 범사에 그를 인정하라 그리하면 네 길을 지도하시리라'(잠언 3:5-6).";
+      }
+    } else {
+      analysis = "이 영역에 대한 응답을 종합적으로 분석한 결과, 하나님의 형상으로 지음 받은 개인의 고유한 경험과 인식이 반영되어 있습니다. 성경적 상담을 통해 더 깊이 탐색하고 하나님의 뜻을 발견할 수 있습니다.";
     }
     
-    const finalSummary = analysis + (recommendations.length > 0 ? "\n\n[권장사항]\n" + recommendations.join("\n") : "");
+    return analysis;
+  }
+  
+  // 🕊️ 성경적 상담 SCT 권장사항
+  function generateBiblicalSctRecommendations(cat, allText) {
+    const recommendations = [];
     
-    setTimeout(() => {
-      setSctSummaries(p => ({ ...p, [cat]: finalSummary }));
-      setLoadingSummary(p => ({ ...p, [cat]: false }));
-    }, 500);
+    if (allText.includes("힘들") || allText.includes("어렵") || allText.includes("갈등")) {
+      recommendations.push("• 매일 성경 읽기와 기도로 하나님과의 관계 깊이하기");
+      recommendations.push("• 성경적 상담을 통해 관계 회복과 용서의 과정 경험하기");
+      recommendations.push("• 소그룹이나 셀 모임에서 영적 지지 받기");
+    }
+    
+    if (allText.includes("불안") || allText.includes("걱정") || allText.includes("두렵")) {
+      recommendations.push("• 시편 말씀 묵상과 암송 (시편 23, 27, 46편 등)");
+      recommendations.push("• 염려를 기도로 전환하기 (빌립보서 4:6-7)");
+      recommendations.push("• 찬양과 경배를 통한 영적 평안 경험");
+    }
+    
+    if (allText.includes("없") || allText.includes("모르")) {
+      recommendations.push("• 하나님의 뜻을 구하는 기도 생활 (야고보서 1:5)");
+      recommendations.push("• 성경적 비전 발견을 위한 금식기도");
+      recommendations.push("• 영적 멘토나 목회자와의 정기적 만남");
+    }
+    
+    if (allText.includes("죄책") || allText.includes("잘못") || allText.includes("미안")) {
+      recommendations.push("• 십자가 복음 묵상과 용서의 확신 갖기");
+      recommendations.push("• 필요시 화해와 용서를 구하는 실천");
+      recommendations.push("• '그리스도 안에서의 새로운 피조물' 정체성 확립 (고린도후서 5:17)");
+    }
+    
+    if (allText.includes("우울") || allText.includes("슬프") || allText.includes("의욕")) {
+      recommendations.push("• 시편 기도로 하나님께 감정 토로하기");
+      recommendations.push("• 성도들과의 교제를 통한 영적 회복");
+      recommendations.push("• 감사 일기 쓰기 (데살로니가전서 5:18)");
+    }
+    
+    // 모든 경우에 공통 권장사항
+    recommendations.push("• 정기적인 교회 출석과 말씀 사역 참여");
+    recommendations.push("• 성경 통독 및 QT(Quiet Time) 습관화");
+    
+    return recommendations;
   }
 
-  // ✅ DSI AI 권장사항 생성 (룰 기반)
+  // ✅ DSI AI 권장사항 생성 (상담 유형별 분기)
   function generateDsiRecommendation() {
     setLoadingRec(true);
     setDsiRec("");
     
+    // 상담 유형 확인 (기본값: 심리상담)
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    
     const { total, areas } = calcDsi();
+    
+    let finalRec = "";
+    if (counselingType === "biblical") {
+      // 🕊️ 성경적 상담 분석
+      finalRec = generateBiblicalDsiAnalysis(total, areas);
+    } else {
+      // 🧠 심리상담 분석
+      finalRec = generatePsychologicalDsiAnalysis(total, areas);
+    }
+    
+    setTimeout(() => {
+      setDsiRec(finalRec);
+      setLoadingRec(false);
+    }, 1000);
+  }
+  
+  // 🧠 심리상담 DSI 분석
+  function generatePsychologicalDsiAnalysis(total, areas) {
     const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
     
     // 영역별 분석
@@ -1328,12 +1471,106 @@ function PsychologicalTestSystem() {
     
     recommendations.push("[장기 목표 (6-12개월)]\n• 자아분화 수준 20% 향상\n• 가족과의 건강한 관계 재정립\n• 스트레스 상황에서의 대처 능력 강화");
     
-    const finalRec = `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[주의사항]\n본 권장사항은 자동 분석 결과이며, 전문 상담사의 해석과 병행되어야 합니다. 개인의 고유한 맥락을 고려한 맞춤형 상담이 중요합니다.`;
+    return `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[주의사항]\n본 권장사항은 자동 분석 결과이며, 전문 상담사의 해석과 병행되어야 합니다. 개인의 고유한 맥락을 고려한 맞춤형 상담이 중요합니다.`;
+  }
+  
+  // 🕊️ 성경적 상담 DSI 분석
+  function generateBiblicalDsiAnalysis(total, areas) {
+    const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
     
-    setTimeout(() => {
-      setDsiRec(finalRec);
-      setLoadingRec(false);
-    }, 1000);
+    // 영역별 분석
+    const areaAnalysis = [];
+    const weakAreas = [];
+    const strongAreas = [];
+    
+    Object.entries(areas).forEach(([area, score]) => {
+      const maxScore = 36;
+      const percentage = (score / maxScore) * 100;
+      
+      if (percentage >= 70) {
+        strongAreas.push(area);
+      } else if (percentage < 50) {
+        weakAreas.push(area);
+      }
+      
+      let areaComment = "";
+      if (area === "인지적 기능") {
+        if (percentage >= 70) {
+          areaComment = "감정을 잘 조절하고 논리적으로 사고합니다. '너희는 이 세대를 본받지 말고 오직 마음을 새롭게 함으로 변화를 받아 하나님의 선하시고 기뻐하시고 온전하신 뜻이 무엇인지 분별하도록 하라'(로마서 12:2). 하나님이 주신 이성의 선물을 잘 사용하고 있습니다.";
+        } else if (percentage < 50) {
+          areaComment = "충동적인 반응이 나타날 수 있습니다. '사람의 성내는 것이 하나님의 의를 이루지 못함이라'(야고보서 1:20). 감정에 휘둘리기 전에 기도하며 하나님의 지혜를 구하세요.";
+        } else {
+          areaComment = "감정 조절 능력이 보통입니다. '너희 안에 이 마음을 품으라 곧 그리스도 예수의 마음이니'(빌립보서 2:5). 그리스도의 마음을 품고 성령의 열매를 구하세요.";
+        }
+      } else if (area === "자아통합") {
+        if (percentage >= 70) {
+          areaComment = "자기 정체성이 명확합니다. '그리스도 안에서 새로운 피조물'(고린도후서 5:17)로서의 정체성을 잘 확립하고 있습니다. 하나님의 자녀로서 확신 있게 살아가고 있습니다.";
+        } else if (percentage < 50) {
+          areaComment = "타인의 영향을 많이 받습니다. '사람을 기쁘게 하는 자가 되려 하였더라면 그리스도의 종이 아니니라'(갈라디아서 1:10). 하나님 안에서 자신의 정체성을 찾고, 하나님만을 기쁘시게 하는 삶을 추구하세요.";
+        } else {
+          areaComment = "자아 정체성 형성 중입니다. '너희 믿음을 시험하여 너희가 믿음 안에 있는가 너희 자신을 확증하라'(고린도후서 13:5). 그리스도 안에서 자신이 누구인지 확인하는 시간을 가지세요.";
+        }
+      } else if (area === "가족투사") {
+        if (percentage >= 70) {
+          areaComment = "가족 문제로부터 건강하게 분리되어 있습니다. '그러므로 사람이 부모를 떠나 그의 아내와 합하여 둘이 한 몸을 이룰지로다'(창세기 2:24). 성경적 독립과 분리를 이루었습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 문제가 현재 삶에 영향을 줍니다. '또 다른 사람들도 건지고자 하여 두려움으로 붙들어 끌어내며'(유다서 1:23). 가족을 사랑하되, 가족의 문제가 당신의 정체성을 정의하지 않도록 기도하세요. 용서와 경계 설정이 필요합니다.";
+        } else {
+          areaComment = "가족 영향을 인식하고 있습니다. '내 멍에는 쉽고 내 짐은 가벼우니라'(마태복음 11:30). 가족의 짐을 주님께 맡기고 건강한 경계를 세우세요.";
+        }
+      } else if (area === "정서적 단절") {
+        if (percentage >= 70) {
+          areaComment = "가족과 적절한 거리를 유지합니다. '각 사람은 자기 자신의 행위를 살피라 그리하면 자랑할 것이 자기에게만 있고 남에게는 있지 아니하리니'(갈라디아서 6:4). 독립성과 친밀감의 균형이 좋습니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족으로부터 과도하게 단절되어 있을 수 있습니다. '네 부모를 공경하라'(출애굽기 20:12)는 명령을 기억하세요. 상처가 있더라도 용서하고 화해를 추구하세요.";
+        } else {
+          areaComment = "가족과의 거리가 적절합니다. '모든 사람과 더불어 화평함과 거룩함을 따르라'(히브리서 12:14). 관계를 유지하며 성장하세요.";
+        }
+      } else if (area === "가족퇴행") {
+        if (percentage >= 70) {
+          areaComment = "가족 스트레스에도 성숙하게 대응합니다. '내가 어렸을 때에는 말하는 것이 어린 아이와 같고... 장성한 사람이 되어서는 어린 아이의 일을 버렸노라'(고린도전서 13:11). 영적 성숙함이 나타납니다.";
+        } else if (percentage < 50) {
+          areaComment = "가족 상황에서 스트레스를 많이 받습니다. '너희 염려를 다 주께 맡기라 이는 그가 너희를 돌보심이라'(베드로전서 5:7). 가족 문제를 하나님께 맡기고 평안을 찾으세요.";
+        } else {
+          areaComment = "가족 상황 대처가 보통입니다. '주 안에서 항상 기뻐하라'(빌립보서 4:4). 어려운 상황에서도 주님을 바라보세요.";
+        }
+      }
+      
+      areaAnalysis.push(`${area} (${score}/${maxScore}점, ${percentage.toFixed(0)}%):\n${areaComment}`);
+    });
+    
+    // 종합 분석
+    let overallAnalysis = `전반적인 자아분화 수준이 ${level}입니다. `;
+    if (total >= 120) {
+      overallAnalysis += "하나님께서 주신 건강한 자아가 잘 형성되어 있습니다. '그리스도 안에서 자유롭게 하는 것'(갈라디아서 5:1)을 경험하고 있으며, 타인과의 관계에서도 그리스도의 사랑으로 균형을 유지합니다. 이 은혜를 감사히 여기며 다른 이들을 세우는 데 사용하세요.";
+    } else if (total >= 80) {
+      overallAnalysis += "기본적인 자아분화가 이루어져 있습니다. '선을 행하되 낙심하지 말지니 포기하지 아니하면 때가 이르매 거두리라'(갈라디아서 6:9). 더 깊은 영적 성숙을 향해 나아가세요.";
+    } else {
+      overallAnalysis += "자아분화 수준이 낮은 편입니다. 그러나 하나님은 '연약한 자들을 강하게 하시는'(고린도후서 12:9) 분이십니다. 주님의 능력이 약한 데서 온전하여집니다. 겸손히 도움을 구하고 성경적 상담을 받으세요.";
+    }
+    
+    // 성경적 권장사항
+    const recommendations = [];
+    
+    if (weakAreas.length > 0) {
+      recommendations.push(`[취약 영역의 영적 치유]\n취약한 영역: ${weakAreas.join(", ")}\n• 해당 영역에 대한 성경 말씀 묵상과 암송\n• 성경적 상담을 통한 하나님의 관점 회복\n• 기도와 금식으로 영적 돌파 경험\n• 소그룹에서 중보기도 받기`);
+    }
+    
+    if (total < 120) {
+      recommendations.push("[영적 성장 전략]\n• 매일 성경 읽기와 QT로 하나님과의 관계 깊이하기\n• 십자가 복음 묵상 - 정체성의 근원 확인\n• 용서와 화해의 실천 (가족 관계 회복)\n• 성령 충만과 성령의 열매 구하기");
+    }
+    
+    if (strongAreas.length > 0) {
+      recommendations.push(`[강점을 통한 섬김]\n강점 영역: ${strongAreas.join(", ")}\n• 이 은사를 교회와 이웃 섬김에 사용하기\n• 약한 자들을 돌보고 격려하기\n• 하나님께 감사와 찬양 드리기`);
+    }
+    
+    recommendations.push("[단기 영적 목표 (1-3개월)]\n• 주 1회 성경적 상담 참여\n• 매일 성경 묵상과 기도 일기 작성\n• 주일 예배 및 소그룹 모임 참석\n• 가족을 위한 중보기도");
+    
+    recommendations.push("[장기 영적 목표 (6-12개월)]\n• 그리스도 안에서의 정체성 확립\n• 가족과의 성경적 관계 회복\n• 영적 성숙을 통한 자아분화 향상\n• 섬김과 사역을 통한 은사 개발");
+    
+    recommendations.push("[추천 성경 구절 묵상]\n• 정체성: 고린도후서 5:17, 갈라디아서 2:20\n• 가족 관계: 에베소서 6:1-4, 골로새서 3:18-21\n• 감정 조절: 잠언 16:32, 야고보서 1:19-20\n• 자유와 성숙: 갈라디아서 5:1, 고린도전서 13:11");
+    
+    return `${overallAnalysis}\n\n[영역별 상세 분석]\n${areaAnalysis.join("\n\n")}\n\n${recommendations.join("\n\n")}\n\n[성경적 상담의 원칙]\n본 권장사항은 성경 말씀에 기초한 분석이며, 숙련된 성경적 상담사와 함께 더 깊이 탐색하시기를 권장합니다. '모든 성경은 하나님의 감동으로 된 것으로 교훈과 책망과 바르게 함과 의로 교육하기에 유익하니'(디모데후서 3:16). 하나님의 말씀이 당신을 인도하고 치유하시기를 기도합니다.`;
   }
 
   function logout() {
@@ -1832,7 +2069,12 @@ function PsychologicalTestSystem() {
     </div>
   );
 
-  if (view === "sctResult") return (
+  if (view === "sctResult") {
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 성경적 상담" : "🧠 심리상담";
+    const counselingTypeColor = counselingType === "biblical" ? "bg-purple-50 border-purple-200 text-purple-700" : "bg-blue-50 border-blue-200 text-blue-700";
+    
+    return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
         <div className="flex justify-between items-center mb-6">
@@ -1854,9 +2096,10 @@ function PsychologicalTestSystem() {
             </button>
           </div>
         </div>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-700"><strong>세션 ID:</strong> {sessionId}</p>
-          <p className="text-sm text-blue-700"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+        <div className={`border rounded-lg p-4 mb-6 ${counselingTypeColor}`}>
+          <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
+          <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+          <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
         </div>
         <div className="space-y-6">
           {Object.entries(sctCategories).map(([cat, nums]) => (
@@ -1906,6 +2149,10 @@ function PsychologicalTestSystem() {
     const { total, areas } = calcDsi();
     const level = total >= 120 ? "높음(양호)" : total >= 80 ? "중간(보통)" : "낮음(취약)";
     
+    const counselingType = activeLinkData?.counselingType || "psychological";
+    const counselingTypeLabel = counselingType === "biblical" ? "🕊️ 성경적 상담" : "🧠 심리상담";
+    const counselingTypeColor = counselingType === "biblical" ? "bg-purple-50 border-purple-200 text-purple-700" : "bg-green-50 border-green-200 text-green-700";
+    
     return (
       <div className="min-h-screen bg-gray-50 p-4">
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
@@ -1928,10 +2175,11 @@ function PsychologicalTestSystem() {
               </button>
             </div>
           </div>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-green-700"><strong>세션 ID:</strong> {sessionId}</p>
-            <p className="text-sm text-green-700"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
-            <p className="text-lg text-green-800 font-bold mt-2">총점: {total}/180 ({level})</p>
+          <div className={`border rounded-lg p-4 mb-6 ${counselingTypeColor}`}>
+            <p className="text-sm"><strong>상담 유형:</strong> {counselingTypeLabel}</p>
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">총점: {total}/180 ({level})</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {Object.entries(areas).map(([area, score]) => (
