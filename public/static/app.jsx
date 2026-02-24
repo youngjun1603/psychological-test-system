@@ -2092,17 +2092,6 @@ function PsychologicalTestSystem() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-blue-800">📝 SCT 검사 결과</h1>
           <div className="flex gap-2">
-            <button 
-              onClick={() => {
-                const sessionData = viewSession(sessionId, true);
-                if (sessionData) {
-                  generateSctPdf(sessionData);
-                }
-              }} 
-              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 font-bold transition flex items-center gap-2"
-            >
-              📄 PDF 다운로드
-            </button>
             <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
               ← 목록
             </button>
@@ -2172,17 +2161,6 @@ function PsychologicalTestSystem() {
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-green-800">🔍 DSI 검사 결과</h1>
             <div className="flex gap-2">
-              <button 
-                onClick={() => {
-                  const sessionData = viewSession(sessionId, true);
-                  if (sessionData) {
-                    generateDsiPdf(sessionData);
-                  }
-                }} 
-                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 font-bold transition flex items-center gap-2"
-              >
-                📄 PDF 다운로드
-              </button>
               <button onClick={() => { setView(isCounselor ? "counselorResults" : isAdmin ? "admin" : "login"); }} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
                 ← 목록
               </button>
