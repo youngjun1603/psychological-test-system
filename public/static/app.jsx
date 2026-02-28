@@ -53,6 +53,10 @@ function PsychologicalTestSystem() {
   const [dsiResponses, setDsiResponses] = useState({});
   const [dsiRec, setDsiRec] = useState("");
   const [loadingRec, setLoadingRec] = useState(false);
+  const [phq9Responses, setPhq9Responses] = useState({});
+  const [gad7Responses, setGad7Responses] = useState({});
+  const [dass21Responses, setDass21Responses] = useState({});
+  const [big5Responses, setBig5Responses] = useState({});
   const [saveStatus, setSaveStatus] = useState("");
   const [sessionId, setSessionId] = useState(() => genId("session"));
   const [submitted, setSubmitted] = useState([]);
@@ -197,6 +201,122 @@ function PsychologicalTestSystem() {
     { num: 36, content: "우리 가족들은 서로에 대해 별 관심이 없었다.", rev: true, area: "가족퇴행" },
   ];
 
+  // PHQ-9: 우울증 선별도구 (Patient Health Questionnaire-9)
+  // 공개 도메인 - 출처: Pfizer Inc. (무료 사용 가능)
+  const phq9Q = [
+    { num: 1, content: "기분이 가라앉거나, 우울하거나, 희망이 없다고 느꼈다" },
+    { num: 2, content: "평소 하던 일에 대한 흥미가 없어지거나 즐거움을 느끼지 못했다" },
+    { num: 3, content: "잠들기가 어렵거나 자주 깼다 / 혹은 너무 많이 잤다" },
+    { num: 4, content: "피곤하다고 느끼거나 기력이 거의 없었다" },
+    { num: 5, content: "식욕이 줄었다 / 혹은 평소보다 많이 먹었다" },
+    { num: 6, content: "내 자신이 실패자라고 느꼈다 / 혹은 자신과 가족을 실망시켰다고 느꼈다" },
+    { num: 7, content: "신문을 읽거나 TV를 보는 것과 같은 일에 집중하기가 어려웠다" },
+    { num: 8, content: "다른 사람들이 알아챌 정도로 평소보다 말과 행동이 느려졌다 / 혹은 너무 안절부절 못해서 가만히 앉아 있을 수 없었다" },
+    { num: 9, content: "차라리 죽는 것이 낫겠다고 생각했다 / 혹은 자해할 생각을 했다" },
+  ];
+
+  // GAD-7: 범불안장애 선별도구 (Generalized Anxiety Disorder-7)
+  // 공개 도메인 - 출처: Pfizer Inc. (무료 사용 가능)
+  const gad7Q = [
+    { num: 1, content: "초조하거나 불안하거나 조마조마하게 느낀다" },
+    { num: 2, content: "걱정하는 것을 멈추거나 조절할 수가 없다" },
+    { num: 3, content: "여러 가지 것들에 대해 걱정을 너무 많이 한다" },
+    { num: 4, content: "편하게 있기가 어렵다" },
+    { num: 5, content: "너무 안절부절 못해서 가만히 있기 힘들다" },
+    { num: 6, content: "쉽게 짜증이 나거나 쉽게 성을 낸다" },
+    { num: 7, content: "마치 끔찍한 일이 생길 것처럼 두렵게 느낀다" },
+  ];
+
+  // DASS-21: 우울/불안/스트레스 척도 (Depression Anxiety Stress Scale-21)
+  // 공개 도메인 - 출처: Lovibond & Lovibond (무료 사용 가능)
+  const dass21Q = [
+    { num: 1, content: "나는 안정을 취하기 힘들었다", scale: "스트레스" },
+    { num: 2, content: "입이 바싹 마르는 느낌이 들었다", scale: "불안" },
+    { num: 3, content: "어떤 것에도 긍정적인 감정을 느낄 수가 없었다", scale: "우울" },
+    { num: 4, content: "호흡 곤란을 경험했다 (예: 과도하게 빠른 호흡, 힘든 일을 하지 않았는데도 숨이 참)", scale: "불안" },
+    { num: 5, content: "무언가를 해야겠다는 의욕이 들지 않았다", scale: "우울" },
+    { num: 6, content: "사소한 일에도 과민반응을 보이는 경향이 있었다", scale: "스트레스" },
+    { num: 7, content: "손이 떨렸다 (예: 글을 쓸 때)", scale: "불안" },
+    { num: 8, content: "신경을 많이 쓰고 있다는 느낌이 들었다", scale: "스트레스" },
+    { num: 9, content: "나쁜 일이 일어날까봐 걱정스러웠다", scale: "불안" },
+    { num: 10, content: "삶에 대해 열정을 느낄 수 없었다", scale: "우울" },
+    { num: 11, content: "쉽게 동요하게 되었다", scale: "스트레스" },
+    { num: 12, content: "긴장을 풀기 어려웠다", scale: "스트레스" },
+    { num: 13, content: "우울하고 슬펐다", scale: "우울" },
+    { num: 14, content: "내가 좋아하는 것을 방해받는 것에 대해 참을 수 없었다", scale: "스트레스" },
+    { num: 15, content: "공황상태에 빠질 것만 같았다", scale: "불안" },
+    { num: 16, content: "어떤 것에도 기대할 것이 없었다", scale: "우울" },
+    { num: 17, content: "나 자신이 가치가 없는 사람으로 느껴졌다", scale: "우울" },
+    { num: 18, content: "사소한 일에도 쉽게 언짢아졌다", scale: "스트레스" },
+    { num: 19, content: "심장이 이유 없이 두근거렸다 (예: 심장 박동수가 증가하거나 빠르게 뛰는 느낌)", scale: "불안" },
+    { num: 20, content: "이유 없이 무서웠다", scale: "불안" },
+    { num: 21, content: "삶이 무의미하게 느껴졌다", scale: "우울" },
+  ];
+
+  // Big5 성격검사 (50문항 버전 - IPIP 공개 버전 기반)
+  // 공개 도메인 - 출처: International Personality Item Pool (무료 사용 가능)
+  const big5Q = [
+    // 외향성 (Extraversion) - 10문항
+    { num: 1, content: "나는 파티의 주인공이다", factor: "외향성", rev: false },
+    { num: 2, content: "나는 다른 사람들과 대화하는 것을 좋아하지 않는다", factor: "외향성", rev: true },
+    { num: 3, content: "나는 편안하게 사람들과 어울린다", factor: "외향성", rev: false },
+    { num: 4, content: "나는 배경에 머물러 있다", factor: "외향성", rev: true },
+    { num: 5, content: "나는 대화를 시작한다", factor: "외향성", rev: false },
+    { num: 6, content: "나는 많은 사람들에게 말을 거의 하지 않는다", factor: "외향성", rev: true },
+    { num: 7, content: "나는 많은 사람들과 대화하는 것이 좋다", factor: "외향성", rev: false },
+    { num: 8, content: "나는 대화를 시작하는 것을 어려워한다", factor: "외향성", rev: true },
+    { num: 9, content: "나는 관심의 중심이 되는 것을 좋아한다", factor: "외향성", rev: false },
+    { num: 10, content: "나는 낯선 사람과 말하고 싶지 않다", factor: "외향성", rev: true },
+    
+    // 친화성 (Agreeableness) - 10문항
+    { num: 11, content: "나는 다른 사람들의 감정에 관심이 있다", factor: "친화성", rev: false },
+    { num: 12, content: "나는 다른 사람들의 감정에 관심이 없다", factor: "친화성", rev: true },
+    { num: 13, content: "나는 다른 사람들을 편안하게 해준다", factor: "친화성", rev: false },
+    { num: 14, content: "나는 다른 사람들을 모욕한다", factor: "친화성", rev: true },
+    { num: 15, content: "나는 사람들의 마음을 부드럽게 한다", factor: "친화성", rev: false },
+    { num: 16, content: "나는 다른 사람들에게 별 관심이 없다", factor: "친화성", rev: true },
+    { num: 17, content: "나는 다른 사람들에게 시간을 내준다", factor: "친화성", rev: false },
+    { num: 18, content: "나는 다른 사람들의 문제에 신경 쓰지 않는다", factor: "친화성", rev: true },
+    { num: 19, content: "나는 다른 사람들을 느끼고 이해한다", factor: "친화성", rev: false },
+    { num: 20, content: "나는 다른 사람들에게 차갑고 무관심하다", factor: "친화성", rev: true },
+    
+    // 성실성 (Conscientiousness) - 10문항
+    { num: 21, content: "나는 항상 준비되어 있다", factor: "성실성", rev: false },
+    { num: 22, content: "나는 내 물건을 어질러 놓는다", factor: "성실성", rev: true },
+    { num: 23, content: "나는 세부사항에 주의를 기울인다", factor: "성실성", rev: false },
+    { num: 24, content: "나는 종종 물건을 어디에 두었는지 잊어버린다", factor: "성실성", rev: true },
+    { num: 25, content: "나는 일을 제때 끝낸다", factor: "성실성", rev: false },
+    { num: 26, content: "나는 일을 망치곤 한다", factor: "성실성", rev: true },
+    { num: 27, content: "나는 일에 진지하게 임한다", factor: "성실성", rev: false },
+    { num: 28, content: "나는 내 의무를 회피한다", factor: "성실성", rev: true },
+    { num: 29, content: "나는 계획을 따른다", factor: "성실성", rev: false },
+    { num: 30, content: "나는 즉시 일을 시작하지 않는다", factor: "성실성", rev: true },
+    
+    // 신경성 (Neuroticism) - 10문항
+    { num: 31, content: "나는 쉽게 스트레스를 받는다", factor: "신경성", rev: false },
+    { num: 32, content: "나는 쉽게 진정한다", factor: "신경성", rev: true },
+    { num: 33, content: "나는 변화에 쉽게 동요한다", factor: "신경성", rev: false },
+    { num: 34, content: "나는 거의 걱정하지 않는다", factor: "신경성", rev: true },
+    { num: 35, content: "나는 쉽게 짜증이 난다", factor: "신경성", rev: false },
+    { num: 36, content: "나는 대부분의 경우 편안하다", factor: "신경성", rev: true },
+    { num: 37, content: "나는 긴장감을 자주 느낀다", factor: "신경성", rev: false },
+    { num: 38, content: "나는 두려움을 거의 느끼지 않는다", factor: "신경성", rev: true },
+    { num: 39, content: "나는 작은 일에도 걱정한다", factor: "신경성", rev: false },
+    { num: 40, content: "나는 항상 여유롭다", factor: "신경성", rev: true },
+    
+    // 개방성 (Openness) - 10문항
+    { num: 41, content: "나는 풍부한 어휘력을 가지고 있다", factor: "개방성", rev: false },
+    { num: 42, content: "나는 추상적인 아이디어를 이해하기 어렵다", factor: "개방성", rev: true },
+    { num: 43, content: "나는 생생한 상상력을 가지고 있다", factor: "개방성", rev: false },
+    { num: 44, content: "나는 새로운 것에 관심이 없다", factor: "개방성", rev: true },
+    { num: 45, content: "나는 많은 것에 대해 생각한다", factor: "개방성", rev: false },
+    { num: 46, content: "나는 예술에 관심이 없다", factor: "개방성", rev: true },
+    { num: 47, content: "나는 철학적 논의를 즐긴다", factor: "개방성", rev: false },
+    { num: 48, content: "나는 복잡한 것을 좋아하지 않는다", factor: "개방성", rev: true },
+    { num: 49, content: "나는 빠른 이해력을 가지고 있다", factor: "개방성", rev: false },
+    { num: 50, content: "나는 창의적인 해결책을 찾기 어렵다", factor: "개방성", rev: true },
+  ];
+
   function calcDsi() {
     let total = 0;
     const areas = { "인지적 기능": 0, "자아통합": 0, "가족투사": 0, "정서적 단절": 0, "가족퇴행": 0 };
@@ -209,6 +329,107 @@ function PsychologicalTestSystem() {
       }
     });
     return { total, areas };
+  }
+
+  // PHQ-9 계산 함수
+  function calcPhq9() {
+    let total = 0;
+    phq9Q.forEach(q => {
+      const r = phq9Responses[q.num];
+      if (r) total += r;
+    });
+    let level = "정상";
+    let color = "green";
+    if (total >= 20) { level = "심한 우울"; color = "red"; }
+    else if (total >= 15) { level = "중간-심도 우울"; color = "orange"; }
+    else if (total >= 10) { level = "중간 우울"; color = "orange"; }
+    else if (total >= 5) { level = "가벼운 우울"; color = "yellow"; }
+    return { total, level, color };
+  }
+
+  // GAD-7 계산 함수
+  function calcGad7() {
+    let total = 0;
+    gad7Q.forEach(q => {
+      const r = gad7Responses[q.num];
+      if (r) total += r;
+    });
+    let level = "정상";
+    let color = "green";
+    if (total >= 15) { level = "심한 불안"; color = "red"; }
+    else if (total >= 10) { level = "중간 불안"; color = "orange"; }
+    else if (total >= 5) { level = "가벼운 불안"; color = "yellow"; }
+    return { total, level, color };
+  }
+
+  // DASS-21 계산 함수
+  function calcDass21() {
+    let depression = 0, anxiety = 0, stress = 0;
+    dass21Q.forEach(q => {
+      const r = dass21Responses[q.num];
+      if (r) {
+        const score = r - 1; // 0-3 범위로 변환
+        if (q.scale === "우울") depression += score;
+        else if (q.scale === "불안") anxiety += score;
+        else if (q.scale === "스트레스") stress += score;
+      }
+    });
+    // 곱하기 2 (DASS-42 점수로 변환)
+    depression *= 2;
+    anxiety *= 2;
+    stress *= 2;
+
+    const getLevel = (score, type) => {
+      if (type === "우울") {
+        if (score >= 28) return { level: "극도로 심함", color: "red" };
+        if (score >= 21) return { level: "심함", color: "orange" };
+        if (score >= 14) return { level: "중간", color: "yellow" };
+        if (score >= 10) return { level: "가벼움", color: "blue" };
+        return { level: "정상", color: "green" };
+      } else if (type === "불안") {
+        if (score >= 20) return { level: "극도로 심함", color: "red" };
+        if (score >= 15) return { level: "심함", color: "orange" };
+        if (score >= 10) return { level: "중간", color: "yellow" };
+        if (score >= 8) return { level: "가벼움", color: "blue" };
+        return { level: "정상", color: "green" };
+      } else { // 스트레스
+        if (score >= 34) return { level: "극도로 심함", color: "red" };
+        if (score >= 26) return { level: "심함", color: "orange" };
+        if (score >= 19) return { level: "중간", color: "yellow" };
+        if (score >= 15) return { level: "가벼움", color: "blue" };
+        return { level: "정상", color: "green" };
+      }
+    };
+
+    return {
+      depression: { score: depression, ...getLevel(depression, "우울") },
+      anxiety: { score: anxiety, ...getLevel(anxiety, "불안") },
+      stress: { score: stress, ...getLevel(stress, "스트레스") }
+    };
+  }
+
+  // Big5 계산 함수
+  function calcBig5() {
+    const factors = { "외향성": 0, "친화성": 0, "성실성": 0, "신경성": 0, "개방성": 0 };
+    const counts = { "외향성": 0, "친화성": 0, "성실성": 0, "신경성": 0, "개방성": 0 };
+    
+    big5Q.forEach(q => {
+      const r = big5Responses[q.num];
+      if (r) {
+        const score = q.rev ? (6 - r) : r;
+        factors[q.factor] += score;
+        counts[q.factor]++;
+      }
+    });
+
+    // 평균 점수 계산 (1-5 범위)
+    Object.keys(factors).forEach(f => {
+      if (counts[f] > 0) {
+        factors[f] = (factors[f] / counts[f]).toFixed(2);
+      }
+    });
+
+    return factors;
   }
 
   function storeLink(d) {
@@ -805,8 +1026,22 @@ function PsychologicalTestSystem() {
     setSctResponses({});
     setSctSummaries({});
     setDsiResponses({});
+    setPhq9Responses({});
+    setGad7Responses({});
+    setDass21Responses({});
+    setBig5Responses({});
     setSessionId(genId("session"));
-    setView(activeLinkData.testType === "SCT" ? "sctTest" : "dsiTest");
+    
+    // 검사 유형에 따라 적절한 화면으로 이동
+    const testViews = {
+      "SCT": "sctTest",
+      "DSI": "dsiTest",
+      "PHQ9": "phq9Test",
+      "GAD7": "gad7Test",
+      "DASS21": "dass21Test",
+      "BIG5": "big5Test"
+    };
+    setView(testViews[activeLinkData.testType] || "sctTest");
   }
 
   function adminLogin() {
@@ -1066,6 +1301,126 @@ function PsychologicalTestSystem() {
     setView("complete");
   }
 
+  // PHQ-9 제출 함수
+  function submitPhq9() {
+    if (Object.keys(phq9Responses).length < 9) {
+      setSaveStatus("⚠️ " + (9 - Object.keys(phq9Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    
+    const data = {
+      sessionId,
+      testType: "PHQ9",
+      responses: phq9Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    
+    console.log('📝 PHQ-9 검사 제출:', sessionId);
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+
+  // GAD-7 제출 함수
+  function submitGad7() {
+    if (Object.keys(gad7Responses).length < 7) {
+      setSaveStatus("⚠️ " + (7 - Object.keys(gad7Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    
+    const data = {
+      sessionId,
+      testType: "GAD7",
+      responses: gad7Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    
+    console.log('📝 GAD-7 검사 제출:', sessionId);
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+
+  // DASS-21 제출 함수
+  function submitDass21() {
+    if (Object.keys(dass21Responses).length < 21) {
+      setSaveStatus("⚠️ " + (21 - Object.keys(dass21Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    
+    const data = {
+      sessionId,
+      testType: "DASS21",
+      responses: dass21Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    
+    console.log('📝 DASS-21 검사 제출:', sessionId);
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+
+  // Big5 제출 함수
+  function submitBig5() {
+    if (Object.keys(big5Responses).length < 50) {
+      setSaveStatus("⚠️ " + (50 - Object.keys(big5Responses).length) + "개 문항이 남아있습니다.");
+      return;
+    }
+    
+    const data = {
+      sessionId,
+      testType: "BIG5",
+      responses: big5Responses,
+      createdAt: new Date().toISOString(),
+      userPhone: userInfo.phone || "미확인",
+      linkId: activeLinkId || null
+    };
+    
+    console.log('📝 Big5 검사 제출:', sessionId);
+    storeSession(data);
+    
+    if (activeLinkId) {
+      const ld = loadLink(activeLinkId);
+      if (ld) {
+        ld.status = "completed";
+        storeLink(ld);
+        setGeneratedLinks(prev => prev.map(l => l.linkId === activeLinkId ? { ...l, status: "completed" } : l));
+      }
+    }
+    setView("complete");
+  }
+
   function viewSession(sid, returnDataOnly = false) {
     console.log('🔍 viewSession 호출:', sid, 'returnDataOnly:', returnDataOnly);
     
@@ -1098,15 +1453,37 @@ function PsychologicalTestSystem() {
       setSctResponses(data.responses || {});
       setSctSummaries(data.summaries || {});
       console.log('📝 SCT 응답 설정 완료');
-    } else {
+    } else if (data.testType === "DSI") {
       setDsiResponses(data.responses || {});
       setDsiRec(data.recommendation || "");
       console.log('🔍 DSI 응답 설정 완료');
+    } else if (data.testType === "PHQ9") {
+      setPhq9Responses(data.responses || {});
+      console.log('😔 PHQ-9 응답 설정 완료');
+    } else if (data.testType === "GAD7") {
+      setGad7Responses(data.responses || {});
+      console.log('😰 GAD-7 응답 설정 완료');
+    } else if (data.testType === "DASS21") {
+      setDass21Responses(data.responses || {});
+      console.log('📊 DASS-21 응답 설정 완료');
+    } else if (data.testType === "BIG5") {
+      setBig5Responses(data.responses || {});
+      console.log('🌟 Big5 응답 설정 완료');
     }
     
     setSessionId(sid);
     setUserInfo({ phone: data.userPhone || "", password: "" });
-    const targetView = data.testType === "SCT" ? "sctResult" : "dsiResult";
+    
+    // 검사 유형에 따라 결과 화면 설정
+    const resultViews = {
+      "SCT": "sctResult",
+      "DSI": "dsiResult",
+      "PHQ9": "phq9Result",
+      "GAD7": "gad7Result",
+      "DASS21": "dass21Result",
+      "BIG5": "big5Result"
+    };
+    const targetView = resultViews[data.testType] || "sctResult";
     console.log('🎯 뷰 전환:', targetView);
     setView(targetView);
     
@@ -1849,12 +2226,38 @@ function PsychologicalTestSystem() {
                 <input type="tel" value={linkForm.clientPhone} onChange={e => setLinkForm({ ...linkForm, clientPhone: e.target.value })} placeholder="010-1234-5678" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-400 outline-none" />
               </div>
             </div>
-            <div className="flex gap-3 mb-4">
-              {[["SCT", "📝 문장완성검사"], ["DSI", "🔍 자아분화검사"]].map(([v, l]) => (
-                <button key={v} onClick={() => setLinkForm({ ...linkForm, testType: v })} className={`flex-1 py-3 rounded-xl font-semibold border-2 transition ${linkForm.testType === v ? "border-purple-500 bg-purple-50 text-purple-800" : "border-gray-200 text-gray-500 hover:border-purple-300"}`}>
-                  {l}
-                </button>
-              ))}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-600 mb-2">검사 유형 선택</label>
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                {[
+                  ["SCT", "📝 문장완성검사"],
+                  ["DSI", "🔍 자아분화검사"],
+                  ["PHQ9", "😔 우울증 선별(PHQ-9)"],
+                  ["GAD7", "😰 불안장애 선별(GAD-7)"],
+                  ["DASS21", "📊 우울/불안/스트레스(DASS-21)"],
+                  ["BIG5", "🌟 Big5 성격검사"]
+                ].map(([v, l]) => (
+                  <button 
+                    key={v} 
+                    onClick={() => setLinkForm({ ...linkForm, testType: v })} 
+                    className={`py-3 px-2 rounded-xl font-semibold border-2 transition text-sm ${
+                      linkForm.testType === v 
+                        ? "border-purple-500 bg-purple-50 text-purple-800" 
+                        : "border-gray-200 text-gray-600 hover:border-purple-300"
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 italic">
+                {linkForm.testType === "SCT" && "50문항 문장완성 투사검사 (저작권 주의)"}
+                {linkForm.testType === "DSI" && "36문항 자아분화 검사 (저작권 주의)"}
+                {linkForm.testType === "PHQ9" && "9문항 우울증 선별도구 (공개 도메인)"}
+                {linkForm.testType === "GAD7" && "7문항 범불안장애 선별도구 (공개 도메인)"}
+                {linkForm.testType === "DASS21" && "21문항 우울/불안/스트레스 척도 (공개 도메인)"}
+                {linkForm.testType === "BIG5" && "50문항 5요인 성격검사 (공개 도메인)"}
+              </p>
             </div>
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-600 mb-2">상담 유형</label>
@@ -2054,6 +2457,158 @@ function PsychologicalTestSystem() {
         <div className="mt-8 text-center">
           <button onClick={submitDsi} disabled={Object.keys(dsiResponses).length < 36} className="bg-green-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
             검사 제출 ({Object.keys(dsiResponses).length}/36)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // PHQ-9 검사 화면
+  if (view === "phq9Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-indigo-800 mb-1">😔 우울증 선별검사 (PHQ-9)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 얼마나 자주 다음의 문제들로 어려움을 겪었는지 표시해 주세요 (9문항)</p>
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4 text-xs text-indigo-800">
+          <div className="flex flex-wrap gap-3">
+            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-2 text-xs text-indigo-700 mb-6 text-center">
+          진행: <strong>{Object.keys(phq9Responses).length}</strong> / 9 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {phq9Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map(v => (
+                  <button key={v} onClick={() => setPhq9Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${phq9Responses[q.num] === v ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-indigo-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitPhq9} className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-indigo-700 transition">
+            검사 제출 ({Object.keys(phq9Responses).length}/9)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // GAD-7 검사 화면
+  if (view === "gad7Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-orange-800 mb-1">😰 범불안장애 선별검사 (GAD-7)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 2주간 다음의 문제들로 얼마나 자주 시달렸는지 표시해 주세요 (7문항)</p>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4 text-xs text-orange-800">
+          <div className="flex flex-wrap gap-3">
+            {["0: 전혀 없음", "1: 여러 날 동안", "2: 7일 이상", "3: 거의 매일"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-2 text-xs text-orange-700 mb-6 text-center">
+          진행: <strong>{Object.keys(gad7Responses).length}</strong> / 7 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {gad7Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map(v => (
+                  <button key={v} onClick={() => setGad7Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${gad7Responses[q.num] === v ? "bg-orange-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-orange-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitGad7} className="bg-orange-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-orange-700 transition">
+            검사 제출 ({Object.keys(gad7Responses).length}/7)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // DASS-21 검사 화면
+  if (view === "dass21Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-teal-800 mb-1">📊 우울/불안/스트레스 척도 (DASS-21)</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">지난 일주일 동안 자신에게 해당되는 정도를 표시해 주세요 (21문항)</p>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mb-4 text-xs text-teal-800">
+          <div className="flex flex-wrap gap-2">
+            {["1: 전혀 아님", "2: 가끔", "3: 자주", "4: 대부분"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-teal-50 border border-teal-200 rounded-lg p-2 text-xs text-teal-700 mb-6 text-center">
+          진행: <strong>{Object.keys(dass21Responses).length}</strong> / 21 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {dass21Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(v => (
+                  <button key={v} onClick={() => setDass21Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${dass21Responses[q.num] === v ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-teal-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitDass21} className="bg-teal-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-teal-700 transition">
+            검사 제출 ({Object.keys(dass21Responses).length}/21)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Big5 검사 화면
+  if (view === "big5Test") return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow p-6">
+        <h1 className="text-2xl font-bold text-center text-purple-800 mb-1">🌟 Big5 성격검사</h1>
+        <p className="text-center text-gray-400 text-sm mb-2">각 문장이 자신을 얼마나 잘 설명하는지 표시해 주세요 (50문항)</p>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-4 text-xs text-purple-800">
+          <div className="flex flex-wrap gap-2">
+            {["1: 전혀 아님", "2: 아님", "3: 보통", "4: 그러함", "5: 매우 그러함"].map(t => <span key={t} className="font-semibold">{t}</span>)}
+          </div>
+        </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-2 text-xs text-purple-700 mb-6 text-center">
+          진행: <strong>{Object.keys(big5Responses).length}</strong> / 50 문항
+        </div>
+        {saveStatus && <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-sm text-yellow-800 text-center">{saveStatus}</div>}
+        <div className="space-y-3">
+          {big5Q.map(q => (
+            <div key={q.num} className="border-b border-gray-100 pb-3">
+              <label className="block mb-2 font-semibold text-gray-700 text-sm">{q.num}. {q.content}</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(v => (
+                  <button key={v} onClick={() => setBig5Responses(p => ({ ...p, [q.num]: v }))} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${big5Responses[q.num] === v ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-purple-100"}`}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button onClick={submitBig5} className="bg-purple-600 text-white px-10 py-3 rounded-xl font-bold text-lg hover:bg-purple-700 transition">
+            검사 제출 ({Object.keys(big5Responses).length}/50)
           </button>
         </div>
       </div>
@@ -2484,6 +3039,183 @@ function SessionList({ sessions, onView }) {
       </div>
     </div>
   );
+
+  // PHQ-9 결과 화면
+  if (view === "phq9Result") {
+    const result = calcPhq9();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-indigo-800">😔 PHQ-9 우울증 선별 결과</h1>
+            <button onClick={() => setView(isCounselor ? "counselorResults" : "login")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">총점: {result.total}/27 ({result.level})</p>
+          </div>
+          <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
+            <h3 className="font-bold mb-2">해석</h3>
+            <p className="text-sm">
+              {result.total < 5 && "우울증 증상이 거의 없습니다."}
+              {result.total >= 5 && result.total < 10 && "가벼운 우울 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
+              {result.total >= 10 && result.total < 15 && "중간 정도의 우울 증상이 있습니다. 전문가 상담을 권장합니다."}
+              {result.total >= 15 && result.total < 20 && "중간-심도의 우울 증상이 있습니다. 전문가의 평가와 치료가 필요합니다."}
+              {result.total >= 20 && "심한 우울 증상이 있습니다. 즉시 전문가의 도움을 받으시기 바랍니다."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {phq9Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
+                <p className="text-sm font-semibold">응답: {phq9Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // GAD-7 결과 화면
+  if (view === "gad7Result") {
+    const result = calcGad7();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-orange-800">😰 GAD-7 범불안장애 선별 결과</h1>
+            <button onClick={() => setView(isCounselor ? "counselorResults" : "login")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+            <p className="text-lg font-bold mt-2">총점: {result.total}/21 ({result.level})</p>
+          </div>
+          <div className={`p-4 rounded-lg mb-6 ${result.color === 'green' ? 'bg-green-50 border border-green-200' : result.color === 'yellow' ? 'bg-yellow-50 border border-yellow-200' : result.color === 'orange' ? 'bg-orange-50 border border-orange-200' : 'bg-red-50 border border-red-200'}`}>
+            <h3 className="font-bold mb-2">해석</h3>
+            <p className="text-sm">
+              {result.total < 5 && "불안 증상이 거의 없습니다."}
+              {result.total >= 5 && result.total < 10 && "가벼운 불안 증상이 있습니다. 필요시 전문가 상담을 고려하세요."}
+              {result.total >= 10 && result.total < 15 && "중간 정도의 불안 증상이 있습니다. 전문가 상담을 권장합니다."}
+              {result.total >= 15 && "심한 불안 증상이 있습니다. 전문가의 평가와 치료가 필요합니다."}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {gad7Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content}</p>
+                <p className="text-sm font-semibold">응답: {gad7Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // DASS-21 결과 화면
+  if (view === "dass21Result") {
+    const result = calcDass21();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-teal-800">📊 DASS-21 결과</h1>
+            <button onClick={() => setView(isCounselor ? "counselorResults" : "login")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className={`p-4 rounded-lg border-2 ${result.depression.color === 'green' ? 'border-green-300 bg-green-50' : result.depression.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.depression.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.depression.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😔 우울</h3>
+              <p className="text-2xl font-bold">{result.depression.score}</p>
+              <p className="text-sm mt-1">{result.depression.level}</p>
+            </div>
+            <div className={`p-4 rounded-lg border-2 ${result.anxiety.color === 'green' ? 'border-green-300 bg-green-50' : result.anxiety.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.anxiety.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.anxiety.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😰 불안</h3>
+              <p className="text-2xl font-bold">{result.anxiety.score}</p>
+              <p className="text-sm mt-1">{result.anxiety.level}</p>
+            </div>
+            <div className={`p-4 rounded-lg border-2 ${result.stress.color === 'green' ? 'border-green-300 bg-green-50' : result.stress.color === 'blue' ? 'border-blue-300 bg-blue-50' : result.stress.color === 'yellow' ? 'border-yellow-300 bg-yellow-50' : result.stress.color === 'orange' ? 'border-orange-300 bg-orange-50' : 'border-red-300 bg-red-50'}`}>
+              <h3 className="font-bold text-lg mb-2">😓 스트레스</h3>
+              <p className="text-2xl font-bold">{result.stress.score}</p>
+              <p className="text-sm mt-1">{result.stress.level}</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="font-bold mb-2">응답 내역</h3>
+            {dass21Q.map(q => (
+              <div key={q.num} className="border-b pb-2">
+                <p className="text-sm text-gray-600">{q.num}. {q.content} <span className="text-xs text-gray-400">({q.scale})</span></p>
+                <p className="text-sm font-semibold">응답: {dass21Responses[q.num]}점</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Big5 결과 화면
+  if (view === "big5Result") {
+    const result = calcBig5();
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold text-purple-800">🌟 Big5 성격검사 결과</h1>
+            <button onClick={() => setView(isCounselor ? "counselorResults" : "login")} className="bg-gray-400 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-500">
+              ← 목록
+            </button>
+          </div>
+          <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+            <p className="text-sm"><strong>세션 ID:</strong> {sessionId}</p>
+            <p className="text-sm"><strong>전화번호:</strong> {userInfo.phone || "N/A"}</p>
+          </div>
+          <div className="space-y-4">
+            {Object.entries(result).map(([factor, score]) => (
+              <div key={factor} className="border rounded-lg p-4 bg-white">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold text-lg">{factor}</h3>
+                  <span className="text-2xl font-bold text-purple-600">{score}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                  <div className="bg-purple-600 h-3 rounded-full" style={{ width: `${(score / 5) * 100}%` }}></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {factor === "외향성" && (score >= 3.5 ? "사교적이고 활동적입니다" : "조용하고 내성적입니다")}
+                  {factor === "친화성" && (score >= 3.5 ? "협조적이고 친절합니다" : "독립적이고 경쟁적입니다")}
+                  {factor === "성실성" && (score >= 3.5 ? "계획적이고 책임감이 강합니다" : "융통성 있고 자발적입니다")}
+                  {factor === "신경성" && (score >= 3.5 ? "감정적으로 민감합니다" : "정서적으로 안정적입니다")}
+                  {factor === "개방성" && (score >= 3.5 ? "창의적이고 호기심이 많습니다" : "실용적이고 현실적입니다")}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 p-4 bg-purple-50 rounded-lg">
+            <h3 className="font-bold mb-2">해석 안내</h3>
+            <p className="text-sm text-gray-700">
+              각 요인은 1-5점 범위로 측정됩니다. 3.5점 이상은 해당 특성이 강함을, 
+              2.5점 이하는 해당 특성이 약함을 의미합니다. 중간 범위(2.5-3.5)는 
+              균형 잡힌 특성을 나타냅니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
 
 // Render
